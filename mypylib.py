@@ -17,9 +17,10 @@ from shutil import copyfile
 
 # self.buffer
 _myName = "myName"
-_myPath = "myPath"
+_myDir = "myDir"
 _myFullName = "myFullName"
-_myFullPath = "myFullPath"
+_myPath = "myPath"
+_myWorkDirectory = "myWorkDirectory"
 _logFileName = "logFileName"
 _localdbFileName = "localdbFileName"
 _lockFileName = "lockFileName"
@@ -34,10 +35,6 @@ _config = "config"
 
 # self.db.config
 _logLevel = "logLevel"
-_info = "info"
-_warning = "warning"
-_error = "error"
-_debug = "debug"
 _isLimitLogFile = "isLimitLogFile"
 _isDeleteOldLogFile = "isDeleteOldLogFile"
 _isIgnorLogWarning = "isIgnorLogWarning"
@@ -46,8 +43,14 @@ _memoryUsinglimit = "memoryUsinglimit"
 _isSelfUpdating = "isSelfUpdating"
 _isLocaldbSaving = "isLocaldbSaving"
 _isWritingLogFile = "isWritingLogFile"
+_isInit = "isInit"
+_programFiles = "programFiles"
 _md5Url = "md5Url"
 _appUrl = "appUrl"
+INFO = "info"
+WARNING = "warning"
+ERROR = "error"
+DEBUG = "debug"
 
 
 class bcolors:
@@ -72,23 +75,32 @@ class MyPyClass:
 		self.buffer[_threadCount] = None
 		self.buffer[_memoryUsing] = None
 		self.buffer[_freeSpaceMemory] = None
+		self.buffer[_isInit] = False
 
 		# Get program, log and database file name
 		myName = self.GetMyName()
-		myPath = self.GetMyPath()
+		myDir = self.GetMyDir()
 		self.buffer[_myName] = myName
-		self.buffer[_myPath] = myPath
+		self.buffer[_myDir] = myDir
 		self.buffer[_myFullName] = self.GetMyFullName()
-		self.buffer[_myFullPath] = self.GetMyFullPath()
-		self.buffer[_logFileName] = myPath + myName + ".log"
-		self.buffer[_localdbFileName] = myPath + myName + ".db"
-		self.buffer[_lockFileName] = myPath + '.' + myName + ".lock"
+		self.buffer[_myPath] = self.GetMyPath()
+		self.buffer[_myWorkDirectory] = self.GetMyWorkDir()
+		self.buffer[_logFileName] = myDir + myName + ".log"
+		self.buffer[_localdbFileName] = myDir + myName + ".db"
+		self.buffer[_lockFileName] = myDir + '.' + myName + ".lock"
 
-		# Ser default settings
+		# Set default settings
 		self.SetDefaultConfig()
 	#end define
 
 	def Init(self):
+		# Check if initialization is already completed
+		if self.buffer[_isInit]:
+			self.AddLog("Initialization already completed", WARNING)
+			return
+		else:
+			self.buffer[_isInit] = True
+
 		# Start only one process (exit if process exist)
 		if self.db[_config][_isStartOnlyOneProcess]:
 			self.StartOnlyOneProcess()
@@ -104,11 +116,11 @@ class MyPyClass:
 			os.remove(self.buffer[_logFileName])
 
 		# Logging the start of the program
-		self.AddLog("Start program '{0}'".format(self.buffer[_myFullPath]))
+		self.AddLog("Start program '{0}'".format(self.buffer[_myPath]))
 	#end define
 
 	def SetDefaultConfig(self):
-		self.db[_config][_logLevel] = _info # info || debug
+		self.db[_config][_logLevel] = INFO # info || debug
 		self.db[_config][_isLimitLogFile] = True
 		self.db[_config][_isDeleteOldLogFile] = False
 		self.db[_config][_isIgnorLogWarning] = False
@@ -148,13 +160,13 @@ class MyPyClass:
 	#end define
 
 	def SelfTesting(self):
-		self.AddLog("Start SelfTesting thread.", _debug)
+		self.AddLog("Start SelfTesting thread.", DEBUG)
 		while True:
 			try:
 				time.sleep(1)
 				self.SelfTest()
 			except Exception as err:
-				self.AddLog("SelfTesting: {0}".format(err), _error)
+				self.AddLog("SelfTesting: {0}".format(err), ERROR)
 	#end define
 
 	def SelfTest(self):
@@ -167,7 +179,7 @@ class MyPyClass:
 		self.buffer[_threadCount] = threadCount
 		if memoryUsing > self.db[_config][_memoryUsinglimit]:
 			self.db[_config][_memoryUsinglimit] += 50
-			self.AddLog("Memory using: {0}Mb, free: {1}Mb".format(memoryUsing, freeSpaceMemory), _warning)
+			self.AddLog("Memory using: {0}Mb, free: {1}Mb".format(memoryUsing, freeSpaceMemory), WARNING)
 	#end define
 
 	def PrintSelfTestingResult(self):
@@ -185,54 +197,70 @@ class MyPyClass:
 	#end define
 
 	def GetMyFullName(self):
-		myFullName = sys.argv[0]
+		'''return "test.py"'''
+		myFullName = sys.argv[0] # os.path.basename(__file__) --> return "mypylib.py"
+		if len(myFullName) == 0:
+			myFullName = "empty"
+		if '/' in myFullName:
+			myFullName = myFullName[myFullName.rfind('/')+1:]
 		return myFullName
 	#end define
 
 	def GetMyName(self):
+		'''return "test"'''
 		myFullName = self.GetMyFullName()
 		myName = myFullName[:myFullName.rfind('.')]
 		return myName
 	#end define
 
-	def GetMyFullPath(self):
-		myFullName = self.GetMyFullName()
-		myFullPath = os.path.abspath(myFullName)
-		return myFullPath
-	#end define
-
 	def GetMyPath(self):
-		myFullPath = self.GetMyFullPath()
-		myPath = myFullPath[:myFullPath.rfind('/')+1]
+		'''return "/some_dir/test.py"'''
+		myFullName = self.GetMyFullName()
+		myPath = os.path.abspath(myFullName)
 		return myPath
 	#end define
 
-	def AddLog(self, inputText, mode=_info):
+	def GetMyDir(self):
+		'''return "/some_dir/"'''
+		myPath = self.GetMyPath()
+		myDir = myPath[:myPath.rfind('/')+1]
+		return myDir
+	#end define
+
+	def GetMyWorkDir(self):
+		'''return "/usr/local/bin/test/"'''
+		programFilesDir = "/usr/local/bin/" # https://ru.wikipedia.org/wiki/FHS
+		myName = self.GetMyName()
+		myWorkDir = programFilesDir + myName + '/'
+		return myWorkDir
+	#end define
+
+	def AddLog(self, inputText, mode=INFO):
 		inputText = "{0}".format(inputText)
 		timeText = DateTimeLibrary.datetime.utcnow().strftime("%d.%m.%Y, %H:%M:%S.%f")[:-3]
 		timeText = "{0} (UTC)".format(timeText).ljust(32, ' ')
 
 		# Pass if set log level
-		if self.db[_config][_logLevel] != _debug and mode == _debug:
+		if self.db[_config][_logLevel] != DEBUG and mode == DEBUG:
 			return
-		elif self.db[_config][_isIgnorLogWarning] and mode == _warning:
+		elif self.db[_config][_isIgnorLogWarning] and mode == WARNING:
 			return
 
 		# Set color mode
-		if mode == _info:
+		if mode == INFO:
 			colorStart = bcolors.INFO + bcolors.BOLD
-		elif mode == _warning:
+		elif mode == WARNING:
 			colorStart = bcolors.WARNING + bcolors.BOLD
-		elif mode == _error:
+		elif mode == ERROR:
 			colorStart = bcolors.ERROR + bcolors.BOLD
-		elif mode == _debug:
+		elif mode == DEBUG:
 			colorStart = bcolors.DEBUG + bcolors.BOLD
 		else:
 			colorStart = bcolors.UNDERLINE + bcolors.BOLD
 		modeText = "{0}{1}{2}".format(colorStart, "[{0}]".format(mode).ljust(10, ' '), bcolors.ENDC)
 
 		# Set color thread
-		if mode == _error:
+		if mode == ERROR:
 			colorStart = bcolors.ERROR + bcolors.BOLD
 		else:
 			colorStart = bcolors.OKGREEN + bcolors.BOLD
@@ -247,9 +275,10 @@ class MyPyClass:
 	#end define
 
 	def WritingLogFile(self):
-		self.AddLog("Start WritingLogFile thread.", _debug)
-		myBool = self.db[_config][_isWritingLogFile]
-		while myBool:
+		if self.db[_config][_isWritingLogFile] == False:
+			return
+		self.AddLog("Start WritingLogFile thread.", DEBUG)
+		while True:
 			time.sleep(1)
 			self.TryWriteLogFile()
 	#end define
@@ -258,7 +287,7 @@ class MyPyClass:
 		try:
 			self.WriteLogFile()
 		except Exception as err:
-			self.AddLog("TryWriteLogFile: {0}".format(err), _error)
+			self.AddLog("TryWriteLogFile: {0}".format(err), ERROR)
 	#end define
 
 	def WriteLogFile(self):
@@ -317,14 +346,17 @@ class MyPyClass:
 	#end define
 
 	def CorrectExit(self):
-		time.sleep(1.1)
-		os.remove(self.buffer[_lockFileName])
+		if len(self.buffer[_logList]) > 0:
+			time.sleep(1.1)
+		if os.path.isfile(self.buffer[_lockFileName]):
+			os.remove(self.buffer[_lockFileName])
 	#end define
 
 	def LocaldbSaving(self):
-		self.AddLog("Start LocaldbSaving thread.", _debug)
-		myBool = self.db[_config][_isLocaldbSaving]
-		while myBool:
+		if self.db[_config][_isLocaldbSaving] == False:
+			return
+		self.AddLog("Start LocaldbSaving thread.", DEBUG)
+		while True:
 			time.sleep(3) # 3 sec
 			threading.Thread(target=self.LocaldbSave).start()
 	#end define
@@ -333,7 +365,7 @@ class MyPyClass:
 		try:
 			self.LocaldbSave()
 		except Exception as err:
-			self.AddLog("TryLocaldbSave: {0}".format(err), _error)
+			self.AddLog("TryLocaldbSave: {0}".format(err), ERROR)
 	#end define
 
 	def LocaldbSave(self):
@@ -354,14 +386,15 @@ class MyPyClass:
 			file.close()
 			result = True
 		except Exception as err:
-			self.AddLog("LocaldbLoad: {0}".format(err), _error)
+			self.AddLog("LocaldbLoad: {0}".format(err), ERROR)
 		return result
 	#end define
 
 	def SelfUpdating(self):
-		self.AddLog("Start SelfUpdating thread.", _debug)
-		myBool = self.db[_config][_isSelfUpdating]
-		while myBool:
+		if self.db[_config][_isSelfUpdating] == False:
+			return
+		self.AddLog("Start SelfUpdating thread.", DEBUG)
+		while True:
 			time.sleep(600) # 600 sec
 			threading.Thread(target=self.TrySelfUpdate).start()
 	#end define
@@ -370,7 +403,7 @@ class MyPyClass:
 		try:
 			self.SelfUpdate()
 		except Exception as err:
-			self.AddLog("TrySelfUpdate: {0}".format(err), _error)
+			self.AddLog("TrySelfUpdate: {0}".format(err), ERROR)
 	#end define
 
 	def SelfUpdate(self):
@@ -380,15 +413,15 @@ class MyPyClass:
 		appUrl = self.db[_config][_appUrl]
 		if (md5Url == None or appUrl == None):
 			return
-		myFullPath = self.buffer[_myFullPath]
+		myPath = self.buffer[_myPath]
 		text = self.GetRequest(md5Url)
-		md5FromServer = self.Pars(text, "{0} md5: ".format(myFullName))
-		myMd5 = self.GetHashMd5(myFullPath)
+		md5FromServer = self.Pars(text, "{0} md5: ".format(myFullName), "\n")
+		myMd5 = self.GetHashMd5(myPath)
 		if (myMd5 == md5FromServer):
 			return
-		self.AddLog("SelfUpdate", _debug)
+		self.AddLog("SelfUpdate", DEBUG)
 		data = urlopen(appUrl).read()
-		file = open(myFullPath, 'wb')
+		file = open(myPath, 'wb')
 		file.write(data)
 		file.close()
 		os.system("systemctl restart {0}".format(myName))
@@ -405,9 +438,11 @@ class MyPyClass:
 		return(hasher.hexdigest())
 	#end define
 
-	def Pars(self, text, search):
+	def Pars(self, text, search, search2):
+		if search not in text:
+			return None
 		text = text[text.find(search) + len(search):]
-		text = text[:text.find("\n")]
+		text = text[:text.find(search2)]
 		return text
 	#end define
 

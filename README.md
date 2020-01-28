@@ -1,6 +1,6 @@
 ## Что это
 Данная библиотека служит для быстрого написания фоновых приложений и системных служб.
-В нем имеются логирование, сохранение локальных файлов, контроль состояния потоков и используемой памяти, способность к самообновлению (например из github) и контроль запуска одного процесса.
+В ней имеются логирование, сохранение локальных файлов, контроль состояния потоков и используемой памяти, способность к самообновлению (например из github) и контроль запуска одного процесса.
 
 ## Быстрый старт
 ```python
@@ -9,13 +9,26 @@ from mypylib import *
 local = MyPyClass()
 
 def Config():
-	local.db["config"]["isStartOnlyOneProcess"] = False
+	# Нижеприведенная настройка является не обязательным.
+	local.db["config"]["isStartOnlyOneProcess"] = False		# Отключить защиту на запуск единственного процесса. По умолчанию = True
+	local.db["config"]["isLimitLogFile"] = False			# Отключить контроль размера файла логирования. По умолчанию = True
+	local.db["config"]["isDeleteOldLogFile"] = True			# Включить удаление файла логирования перед запуском. По умолчанию = False
+	local.db["config"]["isIgnorLogWarning"] = True			# Включить игнорирование предупреждений. По умолчанию = False
+	local.db["config"]["memoryUsinglimit"] = 20				# Установить лимит контроля использования памяти в Мб. По умолчанию = 50
+	local.db["config"]["isSelfUpdating"] = True				# Включить автоматическое обновление. По умолчанию = False. Требуются "md5Url" и "appUrl"
+	local.db["config"]["md5Url"] = "https://raw.githubusercontent.com/<user-name>/<some-dir>/master/README.md"
+	local.db["config"]["appUrl"] = "https://raw.githubusercontent.com/<user-name>/<some-dir>/master/<some-file>.py"
+	local.db["config"]["isLocaldbSaving"] = True			# Сохранять локальную БД (local.db) в файл. По умолчанию = False
+	local.db["config"]["isWritingLogFile"] = False			# Отключить запсиь логов в файл. По умолчанию = True
 #end define
 
 def General():
-	while True:
-		local.PrintSelfTestingResult()
-		time.sleep(3)
+	# some code...
+
+
+	# example:
+	time.sleep(5)
+	local.PrintSelfTestingResult()
 #end define
 
 ###

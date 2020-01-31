@@ -10,17 +10,20 @@ import base64
 import psutil
 import hashlib
 import threading
+import subprocess
 import datetime as DateTimeLibrary
 from urllib.request import urlopen
 from shutil import copyfile
 
 
 # self.buffer
+_lang = "lang"
 _myName = "myName"
 _myDir = "myDir"
 _myFullName = "myFullName"
 _myPath = "myPath"
-_myWorkDirectory = "myWorkDirectory"
+_myWorkDir = "myWorkDir"
+_myTempDir = "myTempDir"
 _logFileName = "logFileName"
 _localdbFileName = "localdbFileName"
 _lockFileName = "lockFileName"
@@ -84,7 +87,9 @@ class MyPyClass:
 		self.buffer[_myDir] = myDir
 		self.buffer[_myFullName] = self.GetMyFullName()
 		self.buffer[_myPath] = self.GetMyPath()
-		self.buffer[_myWorkDirectory] = self.GetMyWorkDir()
+		self.buffer[_myWorkDir] = self.GetMyWorkDir()
+		self.buffer[_myTempDir] = self.GetMyTempDir()
+		self.buffer[_lang] = self.GetLang()
 		self.buffer[_logFileName] = myDir + myName + ".log"
 		self.buffer[_localdbFileName] = myDir + myName + ".db"
 		self.buffer[_lockFileName] = myDir + '.' + myName + ".lock"
@@ -101,10 +106,18 @@ class MyPyClass:
 		else:
 			self.buffer[_isInit] = True
 
+		# Check all directorys
+		os.makedirs(self.buffer[_myWorkDir], exist_ok=True)
+		os.makedirs(self.buffer[_myTempDir], exist_ok=True)
+
 		# Start only one process (exit if process exist)
 		if self.db[_config][_isStartOnlyOneProcess]:
 			self.StartOnlyOneProcess()
 
+		# Load local database
+		if self.db[_config][_isLocaldbSaving]:
+			self.LocaldbLoad()
+		
 		# Start other threads
 		threading.Thread(target=self.WritingLogFile, name="Logging", daemon=True).start()
 		threading.Thread(target=self.SelfTesting, name="SelfTesting", daemon=True).start()
@@ -171,8 +184,8 @@ class MyPyClass:
 
 	def SelfTest(self):
 		process = psutil.Process(os.getpid())
-		memoryUsing = self.b2mb(process.memory_info().rss)
-		freeSpaceMemory = self.b2mb(psutil.virtual_memory().available)
+		memoryUsing = b2mb(process.memory_info().rss)
+		freeSpaceMemory = b2mb(psutil.virtual_memory().available)
 		threadCount = threading.active_count()
 		self.buffer[_freeSpaceMemory] = freeSpaceMemory
 		self.buffer[_memoryUsing] = memoryUsing
@@ -198,7 +211,7 @@ class MyPyClass:
 
 	def GetMyFullName(self):
 		'''return "test.py"'''
-		myFullName = sys.argv[0] # os.path.basename(__file__) --> return "mypylib.py"
+		myFullName = sys.argv[0]
 		if len(myFullName) == 0:
 			myFullName = "empty"
 		if '/' in myFullName:
@@ -229,10 +242,43 @@ class MyPyClass:
 
 	def GetMyWorkDir(self):
 		'''return "/usr/local/bin/test/"'''
-		programFilesDir = "/usr/local/bin/" # https://ru.wikipedia.org/wiki/FHS
+		if self.CheckRootPermission():
+			# https://ru.wikipedia.org/wiki/FHS
+			programFilesDir = "/usr/local/bin/"
+		else:
+			# https://habr.com/ru/post/440620/
+			userHomeDir = dir(os.getenv("HOME"))
+			programFilesDir = os.getenv("XDG_DATA_HOME", userHomeDir + ".local/share/")
 		myName = self.GetMyName()
-		myWorkDir = programFilesDir + myName + '/'
+		myWorkDir = dir(programFilesDir + myName)
 		return myWorkDir
+	#end define
+
+	def GetMyTempDir(self):
+		'''return "/tmp/test/"'''
+		tempFilesDir = "/tmp/" # https://ru.wikipedia.org/wiki/FHS
+		myName = self.GetMyName()
+		myTempDir = dir(tempFilesDir + myName)
+		return myTempDir
+	#end define
+
+	def GetLang(self):
+		lang = os.getenv("LANG")
+		if "ru" in lang:
+			lang = "ru"
+		else:
+			lang = "en"
+		return lang
+	#end define
+
+	def CheckRootPermission(self):
+		process = subprocess.run(["touch", "/checkpermission"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+		if (process.returncode == 0):
+			subprocess.run(["rm", "/checkpermission"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+			result = True
+		else:
+			result = False
+		return result
 	#end define
 
 	def AddLog(self, inputText, mode=INFO):
@@ -323,10 +369,6 @@ class MyPyClass:
 				for chunk in iter(lambda: file.read(chunk_size), ''))
 	#end define
 
-	def b2mb(self, item):
-		return int(item/1024/1024)
-	#end define
-
 	def DictToBase64WithCompress(self, item):
 		string = json.dumps(item)
 		original = string.encode("utf-8")
@@ -414,9 +456,9 @@ class MyPyClass:
 		if (md5Url == None or appUrl == None):
 			return
 		myPath = self.buffer[_myPath]
-		text = self.GetRequest(md5Url)
-		md5FromServer = self.Pars(text, "{0} md5: ".format(myFullName), "\n")
-		myMd5 = self.GetHashMd5(myPath)
+		text = GetRequest(md5Url)
+		md5FromServer = Pars(text, "{0} md5: ".format(myFullName), "\n")
+		myMd5 = GetHashMd5(myPath)
 		if (myMd5 == md5FromServer):
 			return
 		self.AddLog("SelfUpdate", DEBUG)
@@ -427,38 +469,50 @@ class MyPyClass:
 		os.system("systemctl restart {0}".format(myName))
 	#end define
 
-	def GetHashMd5(self, fileName):
-		BLOCKSIZE = 65536
-		hasher = hashlib.md5()
-		with open(fileName, 'rb') as file:
-			buf = file.read(BLOCKSIZE)
-			while len(buf) > 0:
-				hasher.update(buf)
-				buf = file.read(BLOCKSIZE)
-		return(hasher.hexdigest())
-	#end define
 
-	def Pars(self, text, search, search2):
-		if search not in text:
-			return None
-		text = text[text.find(search) + len(search):]
-		text = text[:text.find(search2)]
-		return text
-	#end define
-
-	def Ping(self, hostname):
-		response = os.system("ping -c 1 -w 3 " + hostname + " > /dev/null")
-		if response == 0:
-			result = True
-		else:
-			result = False
-		return result
-	#end define
-
-	def GetRequest(self, url):
-		link = urlopen(url)
-		data = link.read()
-		text = data.decode("utf-8")
-		return text
-	#end define
 #end class
+
+def GetHashMd5(fileName):
+	BLOCKSIZE = 65536
+	hasher = hashlib.md5()
+	with open(fileName, 'rb') as file:
+		buf = file.read(BLOCKSIZE)
+		while len(buf) > 0:
+			hasher.update(buf)
+			buf = file.read(BLOCKSIZE)
+	return(hasher.hexdigest())
+#end define
+
+def Pars(text, search, search2):
+	if search not in text:
+		return None
+	text = text[text.find(search) + len(search):]
+	text = text[:text.find(search2)]
+	return text
+#end define
+
+def Ping(hostname):
+	process = subprocess.run(["ping", "-c", 1, "-w", 3, hostname], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+	if process.returncode == 0:
+		result = True
+	else:
+		result = False
+	return result
+#end define
+
+def GetRequest(url):
+	link = urlopen(url)
+	data = link.read()
+	text = data.decode("utf-8")
+	return text
+#end define
+
+def dir(inputDir):
+	if (inputDir[-1:] != '/'):
+		inputDir += '/'
+	return inputDir
+#end define
+
+def b2mb(item):
+	return int(int(item)/1024/1024)
+#end define

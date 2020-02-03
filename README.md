@@ -28,6 +28,7 @@ def General():
 
 	# example:
 	time.sleep(5)
+	print(json.dumps(local.buffer, indent=4))
 	local.PrintSelfTestingResult()
 #end define
 

@@ -215,7 +215,8 @@ class MyPyClass:
 		if len(myFullName) == 0:
 			myFullName = "empty"
 		if '/' in myFullName:
-			myFullName = myFullName[myFullName.rfind('/')+1:]
+			# myFullName = myFullName[myFullName.rfind('/')+1:]
+			myFullName = GetFullNameFromPath(myFullName)
 		return myFullName
 	#end define
 
@@ -236,7 +237,8 @@ class MyPyClass:
 	def GetMyDir(self):
 		'''return "/some_dir/"'''
 		myPath = self.GetMyPath()
-		myDir = myPath[:myPath.rfind('/')+1]
+		# myDir = myPath[:myPath.rfind('/')+1]
+		myDir = GetDirFromPath(myPath)
 		return myDir
 	#end define
 
@@ -428,7 +430,7 @@ class MyPyClass:
 			file.close()
 			result = True
 		except Exception as err:
-			self.AddLog("LocaldbLoad: {0}".format(err), ERROR)
+			self.AddLog("LocaldbLoad: {0}".format(err), WARNING)
 		return result
 	#end define
 
@@ -468,8 +470,6 @@ class MyPyClass:
 		file.close()
 		os.system("systemctl restart {0}".format(myName))
 	#end define
-
-
 #end class
 
 def GetHashMd5(fileName):
@@ -515,4 +515,45 @@ def dir(inputDir):
 
 def b2mb(item):
 	return int(int(item)/1024/1024)
+#end define
+
+def SearchFileInDir(path, fileName):
+	result = None
+	for entry in os.scandir(path):
+		if entry.name.startswith('.'):
+			continue
+		if entry.is_dir():
+			buff = SearchFileInDir(entry.path, fileName)
+			if buff is not None:
+				result = buff
+				break
+		elif entry.is_file():
+			if entry.name == fileName:
+				result = entry.path
+				break
+	return result
+#end define
+
+def SearchDirInDir(path, dirName):
+	result = None
+	for entry in os.scandir(path):
+		if entry.name.startswith('.'):
+			continue
+		if entry.is_dir():
+			if entry.name == dirName:
+				result = entry.path
+				break
+			buff = SearchDirInDir(entry.path, dirName)
+			if buff is not None:
+				result = buff
+				break
+	return result
+#end define
+
+def GetDirFromPath(path):
+	return path[:path.rfind('/')+1]
+#end define
+
+def GetFullNameFromPath(path):
+	return path[path.rfind('/')+1:]
 #end define

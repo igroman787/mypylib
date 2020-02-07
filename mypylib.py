@@ -483,11 +483,14 @@ def GetHashMd5(fileName):
 	return(hasher.hexdigest())
 #end define
 
-def Pars(text, search, search2):
+def Pars(text, search, search2=None):
+	if search is None or text is None:
+		return None
 	if search not in text:
 		return None
 	text = text[text.find(search) + len(search):]
-	text = text[:text.find(search2)]
+	if search2 is not None and search2 in text:
+		text = text[:text.find(search2)]
 	return text
 #end define
 

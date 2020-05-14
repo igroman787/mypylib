@@ -55,6 +55,17 @@ WARNING = "warning"
 ERROR = "error"
 DEBUG = "debug"
 
+class gcolors:
+	'''This class is designed to display text in color format'''
+	red = "\033[41m"
+	green = "\033[42m"
+	yellow = "\033[43m"
+	blue = "\033[44m"
+	magenta = "\033[45m"
+	cyan = "\033[46m"
+	endc = "\033[0m"
+	default = "\033[49m"
+#end class
 
 class bcolors:
 	'''This class is designed to display text in color format'''
@@ -67,6 +78,7 @@ class bcolors:
 	endc = "\033[0m"
 	bold = "\033[1m"
 	underline = "\033[4m"
+	default = "\033[39m"
 
 	DEBUG = magenta
 	INFO = blue
@@ -726,15 +738,13 @@ def PrintTable(arr):
 		for item in arr:
 			buff[i].append(len(str(item[i])))
 	for item in arr:
-		if item == arr[0]:
-			print(bcolors.INFO, end = '')
-			print(bcolors.BOLD, end = '')
 		for i in range(len(arr[0])):
 			index = max(buff[i]) + 2
 			ptext = str(item[i]).ljust(index)
+			if item == arr[0]:
+				ptext = bcolors.Blue(ptext)
+				ptext = bcolors.Bold(ptext)
 			print(ptext, end = '')
-		if item == arr[0]:
-			print(bcolors.ENDC, end = '')
 		print()
 #end define
 
@@ -742,7 +752,7 @@ def GetTimestamp():
 	return int(time.time())
 #end define
 
-def Text2ColorText(text):
+def ColorText(text):
 	for cname in bcolors.colors:
 		item = '{' + cname + '}'
 		if item in text:
@@ -751,7 +761,7 @@ def Text2ColorText(text):
 #end define
 
 def ColorPrint(text):
-	text = Text2ColorText(text)
+	text = ColorText(text)
 	print(text)
 #end define
 
@@ -783,4 +793,43 @@ def Timestamp2Datetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
 	datetime = time.localtime(timestamp)
 	result = time.strftime(format, datetime)
 	return result
+#end define
+
+def timeago(timestamp=False):
+    """
+    Get a datetime object or a int() Epoch timestamp and return a
+    pretty string like 'an hour ago', 'Yesterday', '3 months ago',
+    'just now', etc
+    """
+    now = DateTimeLibrary.datetime.now()
+    if type(timestamp) is int:
+        diff = now - DateTimeLibrary.datetime.fromtimestamp(timestamp)
+    elif isinstance(timestamp,DateTimeLibrary.datetime):
+        diff = now - timestamp
+    elif not timestamp:
+        diff = now - now
+    second_diff = diff.seconds
+    day_diff = diff.days
+
+    if day_diff < 0:
+        return ''
+
+    if day_diff == 0:
+        if second_diff < 10:
+            return "just now"
+        if second_diff < 60:
+            return str(second_diff) + " seconds ago"
+        if second_diff < 120:
+            return "a minute ago"
+        if second_diff < 3600:
+            return str(second_diff // 60) + " minutes ago"
+        if second_diff < 7200:
+            return "an hour ago"
+        if second_diff < 86400:
+            return str(second_diff // 3600) + " hours ago"
+    if day_diff < 31:
+        return str(day_diff) + " days ago"
+    if day_diff < 365:
+        return str(day_diff // 30) + " months ago"
+    return str(day_diff // 365) + " years ago"
 #end define

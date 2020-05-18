@@ -833,3 +833,7 @@ def timeago(timestamp=False):
         return str(day_diff // 30) + " months ago"
     return str(day_diff // 365) + " years ago"
 #end define
+
+def dec2hex(dec):
+	return hex(dec)[2:]
+#end define

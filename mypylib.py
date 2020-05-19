@@ -779,8 +779,14 @@ def GetLoadAvg():
 def GetInternetInterfaceName():
 	cmd = "ip --json route"
 	text = subprocess.getoutput(cmd)
-	arr = json.loads(text)
-	interfaceName = arr[0]["dev"]
+	try:
+		arr = json.loads(text)
+		interfaceName = arr[0]["dev"]
+	except:
+		lines = text.split('\n')
+		items = lines[0].split(' ')
+		buff = items.index("dev")
+		interfaceName = items[buff+1]
 	return interfaceName
 #end define
 

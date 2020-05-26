@@ -10,7 +10,6 @@ import copy
 import base64
 import psutil
 import hashlib
-import platform
 import threading
 import subprocess
 import datetime as DateTimeLibrary

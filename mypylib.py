@@ -867,7 +867,7 @@ def Add2Systemd(**kwargs):
 	if name is None or start is None:
 		raise Exception("Bad args. Need 'name' and 'start'.")
 		return
-	if os.path.isfile():
+	if os.path.isfile(path):
 		print("Unit exist.")
 		return
 	# end if

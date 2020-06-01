@@ -888,7 +888,7 @@ Group = {Group}
 
 [Install]
 WantedBy = multi-user.target
-	""".format(path=path, name=name, ExecStart=start, ExecStopPost=post, User=user, Group=group)
+	""".format(name=name, ExecStart=start, ExecStopPost=post, User=user, Group=group)
 	file = open(path, 'wt')
 	file.write(text)
 	file.close()

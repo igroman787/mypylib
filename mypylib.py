@@ -843,3 +843,69 @@ def timeago(timestamp=False):
 def dec2hex(dec):
 	return hex(dec)[2:]
 #end define
+
+def RunAsRoot(args):
+	file = open("/etc/issue")
+	text = file.read()
+	file.close()
+	if "Ubuntu" in text:
+		args = ["sudo", "-S"] + args
+	else:
+		print("Enter root password")
+		args = ["su", "-c"] + [" ".join(args)]
+	subprocess.call(args)
+#end define
+
+def Add2Systemd(**kwargs):
+	name = kwargs.get("name")
+	start = kwargs.get("start")
+	post = kwargs.get("post", "none")
+	user = kwargs.get("user", "root")
+	group = kwargs.get("group", user)
+	path = "/etc/systemd/system/{name}.service".format(name=name)
+	
+	if name is None or start is None:
+		raise Exception("Bad args. Need 'name' and 'start'.")
+		return
+	if os.path.isfile():
+		print("Unit exist.")
+		return
+	# end if
+	
+	text = """
+[Unit]
+Description = {name} service. Created by https://github.com/igroman787/mypylib.
+After = network.target
+
+[Service]
+Type = simple
+Restart = always
+RestartSec = 30
+ExecStart = {ExecStart}
+ExecStopPost = {ExecStopPost}
+User = {User}
+Group = {Group}
+
+[Install]
+WantedBy = multi-user.target
+	""".format(name=name, ExecStart=start, ExecStopPost=post, User=user, Group=group)
+	file = open(path, 'wt')
+	file.write(text)
+	file.close()
+	
+	# Изменить права
+	args = ["chmod", "664", path]
+	subprocess.run(args)
+	
+	# Разрешить запуск
+	args = ["chmod", "+x", path]
+	subprocess.run(args)
+	
+	# Перезапустить systemd
+	args = ["systemctl", "daemon-reload"]
+	subprocess.run(args)
+	
+	# Включить автозапуск
+	args = ["systemctl", "enable", name]
+	subprocess.run(args)
+#end define

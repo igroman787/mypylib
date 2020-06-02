@@ -859,7 +859,7 @@ def RunAsRoot(args):
 def Add2Systemd(**kwargs):
 	name = kwargs.get("name")
 	start = kwargs.get("start")
-	post = kwargs.get("post", "echo service down")
+	post = kwargs.get("post", "/bin/echo service down")
 	user = kwargs.get("user", "root")
 	group = kwargs.get("group", user)
 	path = "/etc/systemd/system/{name}.service".format(name=name)

@@ -523,10 +523,11 @@ class MyPyClass:
 			file.write(string)
 	#end define
 
-	def dbLoad(self):
+	def dbLoad(self, fileName=False):
 		result = False
-		try:
+		if not fileName:
 			fileName = self.buffer[_localdbFileName]
+		try:
 			file = open(fileName, 'r')
 			original = file.read()
 			file.close()

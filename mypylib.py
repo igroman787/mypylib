@@ -16,6 +16,8 @@ import datetime as DateTimeLibrary
 from urllib.request import urlopen
 from shutil import copyfile
 
+import platform
+import re 
 
 # self.buffer
 _lang = "lang"
@@ -767,10 +769,19 @@ def ColorPrint(text):
 #end define
 
 def GetLoadAvg():
-	file = open("/proc/loadavg")
-	loadavg = file.read()
-	file.close()
-	loadavg_arr = loadavg.split(' ')
+	if platform.system() in ['FreeBSD','Darwin']:
+		loadavg = subprocess.check_output(["sysctl", "-n", "vm.loadavg"]).decode('utf-8')
+		m = re.match(r"{ (\d+\.\d+) (\d+\.\d+) (\d+\.\d+).+", loadavg)
+		if m:
+			loadavg_arr = [m.group(1), m.group(2), m.group(3)];
+		else:
+			loadavg_arr = [0.00,0.00,0.00]
+	else:
+		file = open("/proc/loadavg")
+		loadavg = file.read()
+		file.close()
+		loadavg_arr = loadavg.split(' ')
+
 	output = loadavg_arr[:3]
 	for i in range(len(output)):
 		output[i] = float(output[i])

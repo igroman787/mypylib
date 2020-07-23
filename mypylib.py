@@ -633,9 +633,7 @@ class MyPyClass:
 		self.AddLog("Thread {name} started".format(name=name), "debug")
 	#end define
 
-	def Cycle(self, func, **kwargs):
-		args = kwargs.get("args")
-		sec = kwargs.get("sec")
+	def Cycle(self, func, sec, args):
 		while True:
 			self.TryFunction(func, args=args)
 			time.sleep(sec)

@@ -4,9 +4,9 @@
 
 ## Быстрый старт
 ```python
-from mypylib import *
+from mypylib.mypylib import *
 
-local = MyPyClass()
+local = MyPyClass(__file__)
 
 def Config():
 	# Нижеприведенная настройка является не обязательным.
@@ -20,14 +20,15 @@ def Config():
 	local.db["config"]["appUrl"] = "https://raw.githubusercontent.com/<user-name>/<some-dir>/master/<some-file>.py"
 	local.db["config"]["isLocaldbSaving"] = True			# Сохранять локальную БД (local.db) в файл. По умолчанию = False
 	local.db["config"]["isWritingLogFile"] = False			# Отключить запсиь логов в файл. По умолчанию = True
+	local.db["config"]["logLevel"] = "debug"				# Уровень логирования. По умолчанию = info
 #end define
 
-def General():
+def General(args):
+	local.AddLog("start General function with args " + args)
 	# some code...
 
 
 	# example:
-	time.sleep(5)
 	print(json.dumps(local.buffer, indent=4))
 	local.PrintSelfTestingResult()
 #end define
@@ -38,7 +39,7 @@ def General():
 
 if __name__ == "__main__":
 	Config()
-	local.Init()
-	General()
+	local.Run()
+	local.Cycle(General, sec=3, args=("test args",))
 #end if
 ```

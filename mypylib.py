@@ -616,9 +616,11 @@ class MyPyClass:
 				func()
 			else:
 				func(*args)
+			return True
 		except Exception as err:
 			text = "{funcName} error: {err}".format(funcName=func.__name__, err=err)
 			self.AddLog(text, "error")
+			return False
 	#end define
 
 	def StartThread(self, func, **kwargs):
@@ -631,7 +633,9 @@ class MyPyClass:
 		self.AddLog("Thread {name} started".format(name=name), "debug")
 	#end define
 
-	def Cycle(self, func, sec, args):
+	def Cycle(self, func, **kwargs):
+		args = kwargs.get("args")
+		sec = kwargs.get("sec")
 		while True:
 			self.TryFunction(func, args=args)
 			time.sleep(sec)
@@ -814,42 +818,42 @@ def Timestamp2Datetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
 #end define
 
 def timeago(timestamp=False):
-    """
-    Get a datetime object or a int() Epoch timestamp and return a
-    pretty string like 'an hour ago', 'Yesterday', '3 months ago',
-    'just now', etc
-    """
-    now = DateTimeLibrary.datetime.now()
-    if type(timestamp) is int:
-        diff = now - DateTimeLibrary.datetime.fromtimestamp(timestamp)
-    elif isinstance(timestamp,DateTimeLibrary.datetime):
-        diff = now - timestamp
-    elif not timestamp:
-        diff = now - now
-    second_diff = diff.seconds
-    day_diff = diff.days
+	"""
+	Get a datetime object or a int() Epoch timestamp and return a
+	pretty string like 'an hour ago', 'Yesterday', '3 months ago',
+	'just now', etc
+	"""
+	now = DateTimeLibrary.datetime.now()
+	if type(timestamp) is int:
+		diff = now - DateTimeLibrary.datetime.fromtimestamp(timestamp)
+	elif isinstance(timestamp,DateTimeLibrary.datetime):
+		diff = now - timestamp
+	elif not timestamp:
+		diff = now - now
+	second_diff = diff.seconds
+	day_diff = diff.days
 
-    if day_diff < 0:
-        return ''
+	if day_diff < 0:
+		return ''
 
-    if day_diff == 0:
-        if second_diff < 10:
-            return "just now"
-        if second_diff < 60:
-            return str(second_diff) + " seconds ago"
-        if second_diff < 120:
-            return "a minute ago"
-        if second_diff < 3600:
-            return str(second_diff // 60) + " minutes ago"
-        if second_diff < 7200:
-            return "an hour ago"
-        if second_diff < 86400:
-            return str(second_diff // 3600) + " hours ago"
-    if day_diff < 31:
-        return str(day_diff) + " days ago"
-    if day_diff < 365:
-        return str(day_diff // 30) + " months ago"
-    return str(day_diff // 365) + " years ago"
+	if day_diff == 0:
+		if second_diff < 10:
+			return "just now"
+		if second_diff < 60:
+			return str(second_diff) + " seconds ago"
+		if second_diff < 120:
+			return "a minute ago"
+		if second_diff < 3600:
+			return str(second_diff // 60) + " minutes ago"
+		if second_diff < 7200:
+			return "an hour ago"
+		if second_diff < 86400:
+			return str(second_diff // 3600) + " hours ago"
+	if day_diff < 31:
+		return str(day_diff) + " days ago"
+	if day_diff < 365:
+		return str(day_diff // 30) + " months ago"
+	return str(day_diff // 365) + " years ago"
 #end define
 
 def dec2hex(dec):

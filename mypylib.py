@@ -20,7 +20,6 @@ import platform
 import re 
 
 # self.buffer
-_lang = "lang"
 _myName = "myName"
 _myDir = "myDir"
 _myFullName = "myFullName"
@@ -172,7 +171,6 @@ class MyPyClass:
 		self.buffer[_myPath] = self.GetMyPath()
 		self.buffer[_myWorkDir] = myWorkDir
 		self.buffer[_myTempDir] = self.GetMyTempDir()
-		self.buffer[_lang] = self.GetLang()
 		self.buffer[_logFileName] = myWorkDir + myName + ".log"
 		self.buffer[_localdbFileName] = myWorkDir + myName + ".db"
 		self.buffer[_pidFilePath] = myWorkDir + myName + ".pid"
@@ -342,7 +340,7 @@ class MyPyClass:
 		else:
 			# https://habr.com/ru/post/440620/
 			userHomeDir = dir(os.getenv("HOME"))
-			programFilesDir = os.getenv("XDG_DATA_HOME", userHomeDir + ".local/share/")
+			programFilesDir = dir(os.getenv("XDG_DATA_HOME", userHomeDir + ".local/share/"))
 		myName = self.GetMyName()
 		myWorkDir = dir(programFilesDir + myName)
 		return myWorkDir
@@ -644,6 +642,29 @@ class MyPyClass:
 		args = kwargs.get("args")
 		sec = kwargs.get("sec")
 		self.StartThread(self.Cycle, name=name, args=(func, sec, args))
+	#end define
+
+	def InitTranslator(self, filePath=None):
+		if filePath is None:
+			filePath = self.db.get("translateFilePath")
+		file = open(filePath, encoding="utf-8")
+		text = file.read()
+		file.close()
+		self.buffer["translate"] = json.loads(text)
+	#end define
+
+	def Translate(self, text):
+		lang = self.GetLang()
+		translate = self.buffer.get("translate")
+		textList = text.split(' ')
+		for item in textList:
+			sitem = translate.get(item)
+			if sitem is None:
+				continue
+			ritem = sitem.get(lang)
+			if ritem is not None:
+				text = text.replace(item, ritem)
+		return text
 	#end define
 #end class
 

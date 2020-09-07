@@ -947,3 +947,12 @@ WantedBy = multi-user.target
 	args = ["systemctl", "enable", name]
 	subprocess.run(args)
 #end define
+
+def ip2int(addr):
+	return struct.unpack("!i", socket.inet_aton(addr))[0]
+#end define
+
+def GetServiceStatus(name):
+	status = os.system("systemctl is-active --quiet {name}".format(name=name))
+	return status
+#end define

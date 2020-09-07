@@ -920,6 +920,9 @@ ExecStart = {ExecStart}
 ExecStopPost = {ExecStopPost}
 User = {User}
 Group = {Group}
+LimitNOFILE = infinity
+LimitNPROC = infinity
+LimitMEMLOCK = infinity
 
 [Install]
 WantedBy = multi-user.target

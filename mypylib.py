@@ -953,6 +953,9 @@ def ip2int(addr):
 #end define
 
 def GetServiceStatus(name):
-	status = os.system("systemctl is-active --quiet {name}".format(name=name))
+	status = False
+	result = os.system("systemctl is-active --quiet {name}".format(name=name))
+	if result == 0:
+		status = True
 	return status
 #end define

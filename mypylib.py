@@ -10,6 +10,7 @@ import copy
 import base64
 import psutil
 import struct
+import socket
 import hashlib
 import threading
 import subprocess

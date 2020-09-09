@@ -9,6 +9,7 @@ import zlib
 import copy
 import base64
 import psutil
+import struct
 import hashlib
 import threading
 import subprocess

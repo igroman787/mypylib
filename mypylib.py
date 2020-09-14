@@ -508,17 +508,20 @@ class MyPyClass:
 	def dbSave(self):
 		fileName = self.buffer[_localdbFileName]
 		if "oldDb" in self.buffer:
-			file = open(fileName, 'r')
-			buffString = file.read()
-			file.close()
-			
-			oldDb = self.buffer.get("oldDb")
-			buffData = json.loads(buffString)
-			for name, value in buffData.items():
-				oldValue = oldDb.get(name)
-				if oldValue != value:
-					self.db[name] = value
-			#end for
+			try:
+				file = open(fileName, 'r')
+				buffString = file.read()
+				file.close()
+				
+				oldDb = self.buffer.get("oldDb")
+				buffData = json.loads(buffString)
+				for name, value in buffData.items():
+					oldValue = oldDb.get(name)
+					if oldValue != value:
+						self.db[name] = value
+				#end for
+			except:
+				pass
 		with open(fileName, 'w') as file:
 			self.buffer["oldDb"] = copy.deepcopy(self.db)
 			string = json.dumps(self.db, indent=4)
@@ -535,7 +538,7 @@ class MyPyClass:
 			file.close()
 			arr = json.loads(original)
 			self.db.update(arr)
-			self.SetDefaultConfig()
+			# self.SetDefaultConfig()
 			result = True
 		except Exception as err:
 			self.AddLog("dbLoad: {0}".format(err), WARNING)

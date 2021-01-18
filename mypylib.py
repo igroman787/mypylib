@@ -538,7 +538,7 @@ class MyPyClass:
 			file.close()
 			arr = json.loads(original)
 			self.db.update(arr)
-			# self.SetDefaultConfig()
+			self.SetDefaultConfig()
 			result = True
 		except Exception as err:
 			self.AddLog("dbLoad: {0}".format(err), WARNING)

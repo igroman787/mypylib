@@ -538,7 +538,7 @@ class MyPyClass:
 			file.close()
 			arr = json.loads(original)
 			self.db.update(arr)
-			self.SetDefaultConfig()
+			# self.SetDefaultConfig()
 			result = True
 		except Exception as err:
 			self.AddLog("dbLoad: {0}".format(err), WARNING)
@@ -881,7 +881,10 @@ def timeago(timestamp=False):
 #end define
 
 def dec2hex(dec):
-	return hex(dec)[2:]
+	h = hex(dec)[2:]
+	if len(h) % 2 > 0:
+		h = '0' + h
+	return h
 #end define
 
 def RunAsRoot(args):

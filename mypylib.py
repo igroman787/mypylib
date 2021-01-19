@@ -12,13 +12,13 @@ import psutil
 import struct
 import socket
 import hashlib
+import platform
 import threading
 import subprocess
 import datetime as DateTimeLibrary
 from urllib.request import urlopen
 from shutil import copyfile
 
-import platform
 import re 
 
 # self.buffer
@@ -888,9 +888,7 @@ def dec2hex(dec):
 #end define
 
 def RunAsRoot(args):
-	file = open("/etc/issue")
-	text = file.read()
-	file.close()
+	text = platform.version()
 	if "Ubuntu" in text:
 		args = ["sudo", "-S"] + args
 	else:

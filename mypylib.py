@@ -890,11 +890,12 @@ def dec2hex(dec):
 def RunAsRoot(args):
 	text = platform.version()
 	if "Ubuntu" in text:
-		args = ["sudo", "-S"] + args
+		args = ["sudo", "-s"] + args
 	else:
 		print("Enter root password")
 		args = ["su", "-c"] + [" ".join(args)]
-	subprocess.call(args)
+	exitCode = subprocess.call(args)
+	return exitCode
 #end define
 
 def Add2Systemd(**kwargs):

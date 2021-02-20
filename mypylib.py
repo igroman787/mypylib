@@ -981,9 +981,12 @@ def GetGitHash(gitPath):
 
 def GetGitUrl(gitPath):
 	args = ["git", "remote", "-v"]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
-	output = process.stdout.decode("utf-8")
-	err = process.stderr.decode("utf-8")
+	try:
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
+		output = process.stdout.decode("utf-8")
+		err = process.stderr.decode("utf-8")
+	except Exception as ex:
+		err = str(ex)
 	if len(err) > 0:
 		return
 	lines = output.split('\n')
@@ -997,21 +1000,30 @@ def GetGitUrl(gitPath):
 #end define
 
 def GetGitAuthorAndRepo(gitPath):
+	author = None
+	repo = None
 	url = GetGitUrl(gitPath)
-	if url is None:
-		return
-	buff = url.split('/')
-	author = buff[3]
-	repo = buff[4]
+	if url is not None:
+		buff = url.split('/')
+		if len(buff) == 5:
+			author = buff[3]
+			repo = buff[4]
+			repo = repo.split('.')
+			repo = repo[0]
 	return author, repo
 #end define
 
 def GetGitLastRemoteCommit(gitPath, branch="master"):
 	author, repo = GetGitAuthorAndRepo(gitPath)
+	if author is None or repo is None:
+		return
 	url = "https://api.github.com/repos/{author}/{repo}/branches/{branch}".format(author=author, repo=repo, branch=branch)
-	text = GetRequest(url)
-	data = json.loads(text)
-	sha = data["commit"]["sha"]
+	sha = None
+	try:
+		text = GetRequest(url)
+		data = json.loads(text)
+		sha = data["commit"]["sha"]
+	except urllib.error: pass
 	return sha
 #end define
 
@@ -1039,6 +1051,8 @@ def CheckGitUpdate(gitPath):
 	result = False
 	if oldHash != newHash:
 		result = True
+	if oldHash is None or newHash is None:
+		result = None
 	return result
 #end define
 

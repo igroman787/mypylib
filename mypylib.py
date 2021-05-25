@@ -47,12 +47,9 @@ _isDeleteOldLogFile = "isDeleteOldLogFile"
 _isIgnorLogWarning = "isIgnorLogWarning"
 _isStartOnlyOneProcess = "isStartOnlyOneProcess"
 _memoryUsinglimit = "memoryUsinglimit"
-_isSelfUpdating = "isSelfUpdating"
 _isLocaldbSaving = "isLocaldbSaving"
 _isWritingLogFile = "isWritingLogFile"
 _programFiles = "programFiles"
-_md5Url = "md5Url"
-_appUrl = "appUrl"
 INFO = "info"
 WARNING = "warning"
 ERROR = "error"
@@ -231,8 +228,6 @@ class MyPyClass:
 			self.db[_config][_isStartOnlyOneProcess] = True
 		if _memoryUsinglimit not in self.db[_config]:
 			self.db[_config][_memoryUsinglimit] = 50
-		if _isSelfUpdating not in self.db[_config]:
-			self.db[_config][_isSelfUpdating] = False
 		if _isLocaldbSaving not in self.db[_config]:
 			self.db[_config][_isLocaldbSaving] = False
 		if _isWritingLogFile not in self.db[_config]:
@@ -557,43 +552,7 @@ class MyPyClass:
 		except Exception as err:
 			self.AddLog("GetSettings: {0}".format(err), WARNING)
 	#end define
-
-	def SelfUpdating(self):
-		if self.db[_config][_isSelfUpdating] == False:
-			return
-		self.AddLog("Start SelfUpdating thread.", DEBUG)
-		while True:
-			time.sleep(600) # 600 sec
-			threading.Thread(target=self.TrySelfUpdate).start()
-	#end define
-
-	def TrySelfUpdate(self):
-		try:
-			self.SelfUpdate()
-		except Exception as err:
-			self.AddLog("TrySelfUpdate: {0}".format(err), ERROR)
-	#end define
-
-	def SelfUpdate(self):
-		myName = self.buffer[_myName]
-		myFullName = self.buffer[_myFullName]
-		md5Url = self.db[_config][_md5Url]
-		appUrl = self.db[_config][_appUrl]
-		if (md5Url == None or appUrl == None):
-			return
-		myPath = self.buffer[_myPath]
-		text = GetRequest(md5Url)
-		md5FromServer = Pars(text, "{0} md5: ".format(myFullName), "\n")
-		myMd5 = GetHashMd5(myPath)
-		if (myMd5 == md5FromServer):
-			return
-		self.AddLog("SelfUpdate", DEBUG)
-		data = urlopen(appUrl).read()
-		with open(myPath, 'wb') as file:
-			file.write(data)
-		os.system("systemctl restart {0}".format(myName))
-	#end define
-
+	
 	def ForkDaemon(self):
 		myPath = self.buffer[_myPath]
 		cmd = " ".join(["/usr/bin/python3", myPath, "-ef", '&'])

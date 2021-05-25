@@ -15,9 +15,6 @@ def Config():
 	local.db["config"]["isDeleteOldLogFile"] = True			# Включить удаление файла логирования перед запуском. По умолчанию = False
 	local.db["config"]["isIgnorLogWarning"] = True			# Включить игнорирование предупреждений. По умолчанию = False
 	local.db["config"]["memoryUsinglimit"] = 20				# Установить лимит контроля использования памяти в Мб. По умолчанию = 50
-	local.db["config"]["isSelfUpdating"] = True				# Включить автоматическое обновление. По умолчанию = False. Требуются "md5Url" и "appUrl"
-	local.db["config"]["md5Url"] = "https://raw.githubusercontent.com/<user-name>/<some-dir>/master/README.md"
-	local.db["config"]["appUrl"] = "https://raw.githubusercontent.com/<user-name>/<some-dir>/master/<some-file>.py"
 	local.db["config"]["isLocaldbSaving"] = True			# Сохранять локальную БД (local.db) в файл. По умолчанию = False
 	local.db["config"]["isWritingLogFile"] = False			# Отключить запсиь логов в файл. По умолчанию = True
 	local.db["config"]["logLevel"] = "debug"				# Уровень логирования. По умолчанию = info

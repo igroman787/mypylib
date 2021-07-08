@@ -17,6 +17,7 @@ import threading
 import subprocess
 import datetime as DateTimeLibrary
 from urllib.request import urlopen
+from urllib.error import URLError
 from shutil import copyfile
 
 import re 
@@ -982,7 +983,7 @@ def GetGitLastRemoteCommit(gitPath, branch="master"):
 		text = GetRequest(url)
 		data = json.loads(text)
 		sha = data["commit"]["sha"]
-	except urllib.error: pass
+	except URLError: pass
 	return sha
 #end define
 

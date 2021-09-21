@@ -574,16 +574,16 @@ class MyPyClass:
 
 	def TryFunction(self, func, **kwargs):
 		args = kwargs.get("args")
+		result = None
 		try:
 			if args is None:
-				func()
+				result = func()
 			else:
-				func(*args)
-			return True
+				result = func(*args)
 		except Exception as err:
 			text = "{funcName} error: {err}".format(funcName=func.__name__, err=err)
 			self.AddLog(text, "error")
-			return False
+		return result
 	#end define
 
 	def StartThread(self, func, **kwargs):

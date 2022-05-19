@@ -927,6 +927,34 @@ def GetServiceStatus(name):
 	return status
 #end define
 
+def GetServiceUptime(name):
+	property = "ExecMainStartTimestampMonotonic"
+	args = ["systemctl", "show", name, "--property=" + property]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	output = process.stdout.decode("utf-8")
+	err = process.stderr.decode("utf-8")
+	if len(err) > 0:
+		return
+	startTimestampMonotonic = Pars(output, f"{property}=", '\n')
+	startTimestampMonotonic = int(startTimestampMonotonic) / 10**6
+	bootTimestamp = psutil.boot_time()
+	timeNow = time.time()
+	startTimestamp = bootTimestamp + startTimestampMonotonic
+	uptime = int(timeNow - startTimestamp)
+	return uptime
+#end define
+
+def GetServicePid(name):
+	property = "MainPID"
+	args = ["systemctl", "show", name, "--property=" + property]
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
+	output = process.stdout.decode("utf-8")
+	err = process.stderr.decode("utf-8")
+	if len(err) > 0:
+		return
+	pid = int(Pars(output, f"{property}=", '\n'))
+	return pid
+#end define
 
 def GetGitHash(gitPath):
 	args = ["git", "rev-parse", "HEAD"]

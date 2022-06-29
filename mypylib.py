@@ -810,7 +810,7 @@ def timeago(timestamp=False):
 	now = DateTimeLibrary.datetime.now()
 	if type(timestamp) is int:
 		diff = now - DateTimeLibrary.datetime.fromtimestamp(timestamp)
-	elif isinstance(timestamp,DateTimeLibrary.datetime):
+	elif isinstance(timestamp, DateTimeLibrary.datetime):
 		diff = now - timestamp
 	elif not timestamp:
 		diff = now - now
@@ -838,6 +838,21 @@ def timeago(timestamp=False):
 	if day_diff < 365:
 		return str(day_diff // 30) + " months ago"
 	return str(day_diff // 365) + " years ago"
+#end define
+
+def time2human(diff):
+	dt = DateTimeLibrary.timedelta(seconds=diff)
+	if dt.days < 0:
+		return ''
+
+	if dt.days == 0:
+		if dt.seconds < 60:
+			return str(dt.seconds) + " seconds"
+		if dt.seconds < 3600:
+			return str(dt.seconds // 60) + " minutes"
+		if dt.seconds < 86400:
+			return str(dt.seconds // 3600) + " hours"
+	return str(dt.days) + " days"
 #end define
 
 def dec2hex(dec):
@@ -956,8 +971,10 @@ def GetServicePid(name):
 	return pid
 #end define
 
-def GetGitHash(gitPath):
+def GetGitHash(gitPath, short=False):
 	args = ["git", "rev-parse", "HEAD"]
+	if short is True:
+		args.insert(2, '--short')
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
 	output = process.stdout.decode("utf-8")
 	err = process.stderr.decode("utf-8")

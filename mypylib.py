@@ -553,17 +553,25 @@ class MyPyClass:
 		except Exception as err:
 			self.AddLog("GetSettings: {0}".format(err), WARNING)
 	#end define
-	
+
+	def Python3Path(self):
+		python3 = "/usr/bin/python3"
+		if platform.system() == "OpenBSD":
+			python3 = "/usr/local/bin/python3"
+		return python3
+
 	def ForkDaemon(self):
 		myPath = self.buffer[_myPath]
-		cmd = " ".join(["/usr/bin/python3", myPath, "-ef", '&'])
+		python3 = self.Python3Path()
+		cmd = " ".join([python3, myPath, "-ef", '&'])
 		os.system(cmd)
 		print("daemon start: " + myPath)
 		self.Exit()
 	#end define
 
 	def AddToCrone(self):
-		cronText="@reboot /usr/bin/python3 \"{path}\" -d\n".format(path=self.buffer[_myPath])
+		python3 = self.Python3Path()
+		cronText = "@reboot {python3} \"{path}\" -d\n".format(path=self.buffer[_myPath],python3=python3)
 		os.system("crontab -l > mycron")
 		with open("mycron", 'a') as file:
 			file.write(cronText)
@@ -757,9 +765,13 @@ def ColorPrint(text):
 #end define
 
 def GetLoadAvg():
-	if platform.system() in ['FreeBSD','Darwin']:
+	psys=platform.system()
+	if psys in ['FreeBSD','Darwin','OpenBSD']:
 		loadavg = subprocess.check_output(["sysctl", "-n", "vm.loadavg"]).decode('utf-8')
-		m = re.match(r"{ (\d+\.\d+) (\d+\.\d+) (\d+\.\d+).+", loadavg)
+		if psys != 'OpenBSD':
+			m = re.match(r"{ (\d+\.\d+) (\d+\.\d+) (\d+\.\d+).+", loadavg)
+		else:
+			m = re.match("(\d+\.\d+) (\d+\.\d+) (\d+\.\d+)", loadavg)
 		if m:
 			loadavg_arr = [m.group(1), m.group(2), m.group(3)];
 		else:
@@ -777,16 +789,23 @@ def GetLoadAvg():
 #end define
 
 def GetInternetInterfaceName():
-	cmd = "ip --json route"
-	text = subprocess.getoutput(cmd)
-	try:
-		arr = json.loads(text)
-		interfaceName = arr[0]["dev"]
-	except:
+	if platform.system() == "OpenBSD":
+		cmd="ifconfig egress"
+		text = subprocess.getoutput(cmd)
 		lines = text.split('\n')
 		items = lines[0].split(' ')
-		buff = items.index("dev")
-		interfaceName = items[buff+1]
+		interfaceName = items[0][:-1]
+	else:
+		cmd = "ip --json route"
+		text = subprocess.getoutput(cmd)
+		try:
+			arr = json.loads(text)
+			interfaceName = arr[0]["dev"]
+		except:
+			lines = text.split('\n')
+			items = lines[0].split(' ')
+			buff = items.index("dev")
+			interfaceName = items[buff+1]
 	return interfaceName
 #end define
 
@@ -864,9 +883,12 @@ def dec2hex(dec):
 
 def RunAsRoot(args):
 	text = platform.version()
+	psys = platform.system()
 	if "Ubuntu" in text:
 		args = ["sudo", "-s"] + args
-	else:
+	elif psys == "OpenBSD":
+		args = ["doas"] + args
+	else :
 		print("Enter root password")
 		args = ["su", "-c"] + [" ".join(args)]
 	exitCode = subprocess.call(args)
@@ -879,7 +901,11 @@ def Add2Systemd(**kwargs):
 	post = kwargs.get("post", "/bin/echo service down")
 	user = kwargs.get("user", "root")
 	group = kwargs.get("group", user)
+	pversion = platform.version()
+	psys = platform.system()
 	path = "/etc/systemd/system/{name}.service".format(name=name)
+	if psys == "OpenBSD":
+	    path = "/etc/rc.d/{name}".format(name=name)
 	
 	if name is None or start is None:
 		raise Exception("Bad args. Need 'name' and 'start'.")
@@ -888,7 +914,6 @@ def Add2Systemd(**kwargs):
 		print("Unit exist.")
 		return
 	# end if
-	
 	text = """
 [Unit]
 Description = {name} service. Created by https://github.com/igroman787/mypylib.
@@ -909,6 +934,17 @@ LimitMEMLOCK = infinity
 [Install]
 WantedBy = multi-user.target
 	""".format(name=name, ExecStart=start, ExecStopPost=post, User=user, Group=group)
+	if psys == "OpenBSD" and 'APRENDIENDODEJESUS' in pversion:
+		text="""#!/bin/ksh
+servicio="{ExecStart}"
+servicio_user="{User}"
+servicio_timeout="3"
+
+. /etc/rc.d/rc.subr
+
+rc_cmd $1
+""".format(name=name, ExecStart=start, ExecStopPost=post, User=user, Group=group)
+
 	file = open(path, 'wt')
 	file.write(text)
 	file.close()
@@ -921,12 +957,16 @@ WantedBy = multi-user.target
 	args = ["chmod", "+x", path]
 	subprocess.run(args)
 	
-	# Перезапустить systemd
-	args = ["systemctl", "daemon-reload"]
-	subprocess.run(args)
+	if psys != "OpenBSD":
+		# Перезапустить systemd
+		args = ["systemctl", "daemon-reload"]
+		subprocess.run(args)
 	
 	# Включить автозапуск
-	args = ["systemctl", "enable", name]
+	if psys == "OpenBSD":
+		args = ["rcctl", "enable", name]
+	else:
+		args = ["systemctl", "enable", name]
 	subprocess.run(args)
 #end define
 
@@ -936,8 +976,12 @@ def ip2int(addr):
 
 def GetServiceStatus(name):
 	status = False
-	result = os.system("systemctl is-active --quiet {name}".format(name=name))
-	if result == 0:
+	psys = platform.system()
+	if psys == "OpenBSD":
+		result = os.system("rcctl check {name}".format(name=name))
+	else:
+		result = os.system("systemctl is-active --quiet {name}".format(name=name))
+	if result == 0 :
 		status = True
 	return status
 #end define

@@ -20,7 +20,7 @@ from urllib.request import urlopen
 from urllib.error import URLError
 from shutil import copyfile
 
-import re 
+import re
 
 # self.buffer
 _myName = "myName"
@@ -89,7 +89,7 @@ class bcolors:
 	ENDC = endc
 	BOLD = bold
 	UNDERLINE = underline
-	
+
 	def GetArgs(*args):
 		text = ""
 		for item in args:
@@ -205,7 +205,7 @@ class MyPyClass:
 		# Remove old log file
 		if (self.db.get(_config).get(_isDeleteOldLogFile) and os.path.isfile(self.buffer[_logFileName])):
 			os.remove(self.buffer[_logFileName])
-		
+
 		# Start other threads
 		threading.Thread(target=self.WritingLogFile, name="Logging", daemon=True).start()
 		threading.Thread(target=self.SelfTesting, name="SelfTesting", daemon=True).start()
@@ -508,7 +508,7 @@ class MyPyClass:
 				file = open(fileName, 'r')
 				buffString = file.read()
 				file.close()
-				
+
 				oldDb = self.buffer.get("oldDb")
 				buffData = json.loads(buffString)
 				for name, value in buffData.items():
@@ -553,7 +553,7 @@ class MyPyClass:
 		except Exception as err:
 			self.AddLog("GetSettings: {0}".format(err), WARNING)
 	#end define
-	
+
 	def ForkDaemon(self):
 		myPath = self.buffer[_myPath]
 		cmd = " ".join(["/usr/bin/python3", myPath, "-ef", '&'])
@@ -879,8 +879,9 @@ def Add2Systemd(**kwargs):
 	post = kwargs.get("post", "/bin/echo service down")
 	user = kwargs.get("user", "root")
 	group = kwargs.get("group", user)
+	workdir = kwargs.get("workdir", None)
 	path = "/etc/systemd/system/{name}.service".format(name=name)
-	
+
 	if name is None or start is None:
 		raise Exception("Bad args. Need 'name' and 'start'.")
 		return
@@ -888,8 +889,8 @@ def Add2Systemd(**kwargs):
 		print("Unit exist.")
 		return
 	# end if
-	
-	text = """
+
+	text = f"""
 [Unit]
 Description = {name} service. Created by https://github.com/igroman787/mypylib.
 After = network.target
@@ -898,33 +899,34 @@ After = network.target
 Type = simple
 Restart = always
 RestartSec = 30
-ExecStart = {ExecStart}
-ExecStopPost = {ExecStopPost}
-User = {User}
-Group = {Group}
+ExecStart = {start}
+ExecStopPost = {post}
+User = {user}
+Group = {group} 
+{f"WorkingDirectory = {workdir}" if workdir else '# WorkingDirectory not set'}
 LimitNOFILE = infinity
 LimitNPROC = infinity
 LimitMEMLOCK = infinity
 
 [Install]
 WantedBy = multi-user.target
-	""".format(name=name, ExecStart=start, ExecStopPost=post, User=user, Group=group)
+	"""
 	file = open(path, 'wt')
 	file.write(text)
 	file.close()
-	
+
 	# Изменить права
 	args = ["chmod", "664", path]
 	subprocess.run(args)
-	
+
 	# Разрешить запуск
 	args = ["chmod", "+x", path]
 	subprocess.run(args)
-	
+
 	# Перезапустить systemd
 	args = ["systemctl", "daemon-reload"]
 	subprocess.run(args)
-	
+
 	# Включить автозапуск
 	args = ["systemctl", "enable", name]
 	subprocess.run(args)

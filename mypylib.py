@@ -503,23 +503,22 @@ class MyPyClass:
 
 	def dbSave(self):
 		fileName = self.buffer[_localdbFileName]
-		if "oldDb" in self.buffer:
-			try:
-				file = open(fileName, 'r')
-				buffString = file.read()
-				file.close()
-
-				oldDb = self.buffer.get("oldDb")
-				buffData = json.loads(buffString)
-				for name, value in buffData.items():
-					oldValue = oldDb.get(name)
-					if oldValue != value:
-						self.db[name] = value
-				#end for
-			except:
-				pass
-		with open(fileName, 'w') as file:
-			self.buffer["oldDb"] = copy.deepcopy(self.db)
+		#if "oldDb" in self.buffer:
+		#	try:
+		#		file = open(fileName, 'r')
+		#		buffString = file.read()
+		#		file.close()
+		#		oldDb = self.buffer.get("oldDb")
+		#		buffData = json.loads(buffString)
+		#		for name, value in buffData.items():
+		#			oldValue = oldDb.get(name)
+		#			if oldValue != value:
+		#				self.db[name] = value
+		#		#end for
+		#	except:
+		#		pass
+		with open(fileName, 'wt') as file:
+			#self.buffer["oldDb"] = copy.deepcopy(self.db)
 			string = json.dumps(self.db, indent=4)
 			file.write(string)
 	#end define

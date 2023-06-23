@@ -22,50 +22,45 @@ from shutil import copyfile
 
 import re
 
-# self.buffer
-_myName = "myName"
-_myDir = "myDir"
-_myFullName = "myFullName"
-_myPath = "myPath"
-_myWorkDir = "myWorkDir"
-_myTempDir = "myTempDir"
-_logFileName = "logFileName"
-_localdbFileName = "localdbFileName"
-_pidFilePath = "pidFilePath"
-_logList = "logList"
-_memoryUsing = "memoryUsing"
-_freeSpaceMemory = "freeSpaceMemory"
-_threadCount = "threadCount"
-_threadCountOld = "threadCountOld"
 
-# self.db
-_config = "config"
-
-# self.db.config
-_logLevel = "logLevel"
-_isLimitLogFile = "isLimitLogFile"
-_isDeleteOldLogFile = "isDeleteOldLogFile"
-_isIgnorLogWarning = "isIgnorLogWarning"
-_isStartOnlyOneProcess = "isStartOnlyOneProcess"
-_memoryUsinglimit = "memoryUsinglimit"
-_isLocaldbSaving = "isLocaldbSaving"
-_isWritingLogFile = "isWritingLogFile"
-_programFiles = "programFiles"
 INFO = "info"
 WARNING = "warning"
 ERROR = "error"
 DEBUG = "debug"
 
-class gcolors:
-	'''This class is designed to display text in color format'''
-	red = "\033[41m"
-	green = "\033[42m"
-	yellow = "\033[43m"
-	blue = "\033[44m"
-	magenta = "\033[45m"
-	cyan = "\033[46m"
-	endc = "\033[0m"
-	default = "\033[49m"
+
+class Dict(dict):
+	def __init__(self, *args, **kwargs):
+		for item in args:
+			self._parse_dict(item)
+		self._parse_dict(kwargs)
+	#end define
+	
+	def _parse_dict(self, d):
+		for key, value in d.items():
+			if type(value) == dict:
+				value = Dict(value)
+			if type(value) == list:
+				value = self._parse_list(value)
+			self[key] = value
+	#end define
+	
+	def _parse_list(self, l):
+		result = list()
+		for value in l:
+			if type(value) == dict:
+				value = Dict(value)
+			result.append(value)
+		return result
+	#end define
+	
+	def __setattr__(self, key, value):
+		self[key] = value
+	#end define
+	
+	def __getattr__(self, key):
+		return self.get(key)
+	#end define
 #end class
 
 class bcolors:
@@ -147,212 +142,212 @@ class bcolors:
 class MyPyClass:
 	def __init__(self, file):
 		self.file = file
-		self.db = dict()
-		self.db[_config] = dict()
+		self.db = Dict()
+		self.db.config = Dict()
 
-		self.buffer = dict()
-		self.buffer[_logList] = list()
-		self.buffer[_threadCount] = None
-		self.buffer[_memoryUsing] = None
-		self.buffer[_freeSpaceMemory] = None
+		self.buffer = Dict()
+		self.buffer.loglist = list()
+		self.buffer.thread_count = None
+		self.buffer.memory_using = None
+		self.buffer.free_space_memory = None
 
 		# Set default settings
-		self.SetDefaultConfig()
-		self.Refresh()
+		self.set_default_config()
+		self.refresh()
 	#end define
 
-	def Refresh(self):
+	def refresh(self):
 		# Get program, log and database file name
-		myName = self.GetMyName()
-		myWorkDir = self.GetMyWorkDir()
-		self.buffer[_myName] = myName
-		self.buffer[_myDir] = self.GetMyDir()
-		self.buffer[_myFullName] = self.GetMyFullName()
-		self.buffer[_myPath] = self.GetMyPath()
-		self.buffer[_myWorkDir] = myWorkDir
-		self.buffer[_myTempDir] = self.GetMyTempDir()
-		self.buffer[_logFileName] = myWorkDir + myName + ".log"
-		self.buffer[_localdbFileName] = myWorkDir + myName + ".db"
-		self.buffer[_pidFilePath] = myWorkDir + myName + ".pid"
+		my_name = self.get_my_name()
+		my_work_dir = self.get_my_work_dir()
+		self.buffer.my_name = my_name
+		self.buffer.my_dir = self.get_my_dir()
+		self.buffer.my_full_name = self.get_my_full_name()
+		self.buffer.my_path = self.get_my_path()
+		self.buffer.my_work_dir = my_work_dir
+		self.buffer.my_temp_dir = self.get_my_temp_dir()
+		self.buffer.log_file_name = my_work_dir + my_name + ".log"
+		self.buffer.db_file_name = my_work_dir + my_name + ".db"
+		self.buffer.pid_file_path = my_work_dir + my_name + ".pid"
 
 		# Check all directorys
-		os.makedirs(self.buffer[_myWorkDir], exist_ok=True)
-		os.makedirs(self.buffer[_myTempDir], exist_ok=True)
+		os.makedirs(self.buffer.my_work_dir, exist_ok=True)
+		os.makedirs(self.buffer.my_temp_dir, exist_ok=True)
 	#end define
 
-	def Run(self):
+	def run(self):
 		# Check args
 		if ("-ef" in sys.argv):
 			file = open(os.devnull, 'w')
 			sys.stdout = file
 			sys.stderr = file
 		if ("-d" in sys.argv):
-			self.ForkDaemon()
+			self.fork_daemon()
 		if ("-s" in sys.argv):
 			x = sys.argv.index("-s")
 			filePath = sys.argv[x+1]
-			self.GetSettings(filePath)
+			self.get_settings(filePath)
 		if ("--add2cron" in sys.argv):
-			self.AddToCrone()
+			self.add_to_crone()
 
 		# Start only one process (exit if process exist)
-		if self.db.get(_config).get(_isStartOnlyOneProcess):
-			self.StartOnlyOneProcess()
+		if self.db.config.is_start_only_one_process:
+			self.start_only_one_process()
 
 		# Load local database
-		self.dbLoad()
+		self.load_db()
 
 		# Remove old log file
-		if (self.db.get(_config).get(_isDeleteOldLogFile) and os.path.isfile(self.buffer[_logFileName])):
-			os.remove(self.buffer[_logFileName])
+		if (self.db.config.is_delete_old_log_file and os.path.isfile(self.buffer.log_file_name)):
+			os.remove(self.buffer.log_file_name)
 
 		# Start other threads
-		threading.Thread(target=self.WritingLogFile, name="Logging", daemon=True).start()
-		threading.Thread(target=self.SelfTesting, name="SelfTesting", daemon=True).start()
-		threading.Thread(target=self.LocaldbSaving, name="LocdbSaving", daemon=True).start()
-		self.buffer[_threadCountOld] = threading.active_count()
+		threading.Thread(target=self.writing_log_file, name="Logging", daemon=True).start()
+		threading.Thread(target=self.self_testing, name="self_testing", daemon=True).start()
+		threading.Thread(target=self.db_saving, name="LocdbSaving", daemon=True).start()
+		self.buffer.thread_count_old = threading.active_count()
 
 		# Logging the start of the program
-		self.AddLog("Start program '{0}'".format(self.buffer[_myPath]))
+		self.add_log("Start program `{self.buffer.my_path}`")
 	#end define
 
-	def SetDefaultConfig(self):
-		if _logLevel not in self.db[_config]:
-			self.db[_config][_logLevel] = INFO # info || debug
-		if _isLimitLogFile not in self.db[_config]:
-			self.db[_config][_isLimitLogFile] = True
-		if _isDeleteOldLogFile not in self.db[_config]:
-			self.db[_config][_isDeleteOldLogFile] = False
-		if _isIgnorLogWarning not in self.db[_config]:
-			self.db[_config][_isIgnorLogWarning] = False
-		if _isStartOnlyOneProcess not in self.db[_config]:
-			self.db[_config][_isStartOnlyOneProcess] = True
-		if _memoryUsinglimit not in self.db[_config]:
-			self.db[_config][_memoryUsinglimit] = 50
-		if _isLocaldbSaving not in self.db[_config]:
-			self.db[_config][_isLocaldbSaving] = False
-		if _isWritingLogFile not in self.db[_config]:
-			self.db[_config][_isWritingLogFile] = True
+	def set_default_config(self):
+		if self.db.config.log_level is None:
+			self.db.config.log_level = INFO # info || debug
+		if self.db.config.is_limit_log_file i None:
+			self.db.config.is_limit_log_file = True
+		if self.db.config.is_delete_old_log_file is None:
+			self.db.config.is_delete_old_log_file = False
+		if self.db.config.is_ignor_log_warning is None:
+			self.db.config.is_ignor_log_warning = False
+		if self.db.config.is_start_only_one_process is None:
+			self.db.config.is_start_only_one_process = True
+		if self.db.config.memory_using_limit is None:
+			self.db.config.memory_using_limit = 50
+		if self.db.config.is_db_saving is None:
+			self.db.config.is_db_saving = False
+		if self.db.config.is_writing_log_file is None:
+			self.db.config.is_writing_log_file = True
 	#end define
 
-	def StartOnlyOneProcess(self):
-		pidFilePath = self.buffer[_pidFilePath]
-		if os.path.isfile(pidFilePath):
-			file = open(pidFilePath, 'r')
+	def start_only_one_process(self):
+		pid_file_path = self.buffer.pid_file_path
+		if os.path.isfile(pid_file_path):
+			file = open(pid_file_path, 'r')
 			pid_str = file.read()
 			file.close()
 			try:
 				pid = int(pid_str)
 				process = psutil.Process(pid)
-				fullProcessName = " ".join(process.cmdline())
+				full_process_name = " ".join(process.cmdline())
 			except:
-				fullProcessName = ""
-			if (fullProcessName.find(self.buffer[_myFullName]) > -1):
+				full_process_name = ""
+			if (full_process_name.find(self.buffer.my_full_name) > -1):
 				print("The process is already running")
 				sys.exit(1)
 			#end if
-		self.WritePid()
+		self.write_pid()
 	#end define
 
-	def WritePid(self):
+	def write_pid(self):
 		pid = os.getpid()
 		pid_str = str(pid)
-		pidFilePath = self.buffer[_pidFilePath]
-		with open(pidFilePath, 'w') as file:
+		pid_file_path = self.buffer.pid_file_path
+		with open(pid_file_path, 'w') as file:
 			file.write(pid_str)
 	#end define
 
-	def SelfTesting(self):
-		self.AddLog("Start SelfTesting thread.", DEBUG)
+	def self_testing(self):
+		self.add_log("Start self_testing thread.", DEBUG)
 		while True:
 			try:
 				time.sleep(1)
-				self.SelfTest()
+				self.self_test()
 			except Exception as err:
-				self.AddLog("SelfTesting: {0}".format(err), ERROR)
+				self.add_log(f"self_testing: {err}", ERROR)
 	#end define
 
-	def SelfTest(self):
+	def self_test(self):
 		process = psutil.Process(os.getpid())
-		memoryUsing = b2mb(process.memory_info().rss)
-		freeSpaceMemory = b2mb(psutil.virtual_memory().available)
+		memory_using = b2mb(process.memory_info().rss)
+		free_space_memory = b2mb(psutil.virtual_memory().available)
 		threadCount = threading.active_count()
-		self.buffer[_freeSpaceMemory] = freeSpaceMemory
-		self.buffer[_memoryUsing] = memoryUsing
-		self.buffer[_threadCount] = threadCount
-		if memoryUsing > self.db[_config][_memoryUsinglimit]:
-			self.db[_config][_memoryUsinglimit] += 50
-			self.AddLog("Memory using: {0}Mb, free: {1}Mb".format(memoryUsing, freeSpaceMemory), WARNING)
+		self.buffer.free_space_memory = free_space_memory
+		self.buffer.memory_using = memory_using
+		self.buffer.thread_count = threadCount
+		if memory_using > self.db.config.memory_using_limit:
+			self.db.config.memory_using_limit += 50
+			self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb", WARNING)
 	#end define
 
-	def PrintSelfTestingResult(self):
-		threadCount_old = self.buffer[_threadCountOld]
-		threadCount_new = self.buffer[_threadCount]
-		memoryUsing = self.buffer[_memoryUsing]
-		freeSpaceMemory = self.buffer[_freeSpaceMemory]
-		self.AddLog("{0}Self testing informatinon:{1}".format(bcolors.INFO, bcolors.ENDC))
-		self.AddLog("Threads: {0} -> {1}".format(threadCount_new, threadCount_old))
-		self.AddLog("Memory using: {0}Mb, free: {1}Mb".format(memoryUsing, freeSpaceMemory))
+	def print_self_testing_result(self):
+		thread_count_old = self.buffer.thread_count_old
+		thread_count_new = self.buffer.thread_count
+		memory_using = self.buffer.memory_using
+		free_space_memory = self.buffer.free_space_memory
+		self.add_log(color_text("{blue}Self testing informatinon:{endc}")
+		self.add_log("Threads: {thread_count_new} -> {thread_count_old}")
+		self.add_log("Memory using: {memory_using}Mb, free: {free_space_memory}Mb")
 	#end define
 
-	def GetThreadName(self):
+	def get_thread_name(self):
 		return threading.currentThread().getName()
 	#end define
 
-	def GetMyFullName(self):
+	def get_my_full_name(self):
 		'''return "test.py"'''
-		myPath = self.GetMyPath()
-		myFullName = GetFullNameFromPath(myPath)
-		if len(myFullName) == 0:
-			myFullName = "empty"
-		return myFullName
+		my_path = self.get_my_path()
+		my_full_name = get_full_name_from_path(my_path)
+		if len(my_full_name) == 0:
+			my_full_name = "empty"
+		return my_full_name
 	#end define
 
-	def GetMyName(self):
+	def get_my_name(self):
 		'''return "test"'''
-		myFullName = self.GetMyFullName()
-		myName = myFullName[:myFullName.rfind('.')]
-		return myName
+		my_full_name = self.get_my_full_name()
+		my_name = my_full_name[:my_full_name.rfind('.')]
+		return my_name
 	#end define
 
-	def GetMyPath(self):
+	def get_my_path(self):
 		'''return "/some_dir/test.py"'''
-		myPath = os.path.abspath(self.file)
-		return myPath
+		my_path = os.path.abspath(self.file)
+		return my_path
 	#end define
 
-	def GetMyDir(self):
+	def get_my_dir(self):
 		'''return "/some_dir/"'''
-		myPath = self.GetMyPath()
-		# myDir = myPath[:myPath.rfind('/')+1]
-		myDir = os.path.dirname(myPath)
+		my_path = self.get_my_path()
+		# myDir = my_path[:my_path.rfind('/')+1]
+		myDir = os.path.dirname(my_path)
 		myDir = dir(myDir)
 		return myDir
 	#end define
 
-	def GetMyWorkDir(self):
+	def get_my_work_dir(self):
 		'''return "/usr/local/bin/test/" or "/home/user/.local/share/test/"'''
-		if self.CheckRootPermission():
+		if self.check_root_permission():
 			# https://ru.wikipedia.org/wiki/FHS
-			programFilesDir = "/usr/local/bin/"
+			program_files_dir = "/usr/local/bin/"
 		else:
 			# https://habr.com/ru/post/440620/
-			userHomeDir = dir(os.getenv("HOME"))
-			programFilesDir = dir(os.getenv("XDG_DATA_HOME", userHomeDir + ".local/share/"))
-		myName = self.GetMyName()
-		myWorkDir = dir(programFilesDir + myName)
-		return myWorkDir
+			user_home_dir = dir(os.getenv("HOME"))
+			program_files_dir = dir(os.getenv("XDG_DATA_HOME", user_home_dir + ".local/share/"))
+		my_name = self.get_my_name()
+		my_work_dir = dir(program_files_dir + my_name)
+		return my_work_dir
 	#end define
 
-	def GetMyTempDir(self):
+	def get_my_temp_dir(self):
 		'''return "/tmp/test/"'''
-		tempFilesDir = "/tmp/" # https://ru.wikipedia.org/wiki/FHS
-		myName = self.GetMyName()
-		myTempDir = dir(tempFilesDir + myName)
+		temp_files_dir = "/tmp/" # https://ru.wikipedia.org/wiki/FHS
+		my_name = self.get_my_name()
+		myTempDir = dir(temp_files_dir + my_name)
 		return myTempDir
 	#end define
 
-	def GetLang(self):
+	def get_lang(self):
 		lang = os.getenv("LANG", "en")
 		if "ru" in lang:
 			lang = "ru"
@@ -361,7 +356,7 @@ class MyPyClass:
 		return lang
 	#end define
 
-	def CheckRootPermission(self):
+	def check_root_permission(self):
 		process = subprocess.run(["touch", "/checkpermission"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 		if (process.returncode == 0):
 			subprocess.run(["rm", "/checkpermission"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -371,15 +366,15 @@ class MyPyClass:
 		return result
 	#end define
 
-	def AddLog(self, inputText, mode=INFO):
-		inputText = "{0}".format(inputText)
+	def add_log(self, inputText, mode=INFO):
+		inputText = f"{inputText}"
 		timeText = DateTimeLibrary.datetime.utcnow().strftime("%d.%m.%Y, %H:%M:%S.%f")[:-3]
 		timeText = "{0} (UTC)".format(timeText).ljust(32, ' ')
 
 		# Pass if set log level
-		if self.db[_config][_logLevel] != DEBUG and mode == DEBUG:
+		if self.db.config.log_level != DEBUG and mode == DEBUG:
 			return
-		elif self.db[_config][_isIgnorLogWarning] and mode == WARNING:
+		elif self.db.config.is_ignor_log_warning and mode == WARNING:
 			return
 
 		# Set color mode
@@ -400,46 +395,46 @@ class MyPyClass:
 			colorStart = bcolors.ERROR + bcolors.BOLD
 		else:
 			colorStart = bcolors.OKGREEN + bcolors.BOLD
-		threadText = "{0}{1}{2}".format(colorStart, "<{0}>".format(self.GetThreadName()).ljust(14, ' '), bcolors.ENDC)
+		threadText = "{0}{1}{2}".format(colorStart, "<{0}>".format(self.get_thread_name()).ljust(14, ' '), bcolors.ENDC)
 		logText = modeText + timeText + threadText + inputText
 
 		# Queue for recording
-		self.buffer[_logList].append(logText)
+		self.buffer.loglist.append(logText)
 
 		# Print log text
 		print(logText)
 	#end define
 
-	def WritingLogFile(self):
-		if self.db[_config][_isWritingLogFile] == False:
+	def writing_log_file(self):
+		if self.db.config.is_writing_log_file == False:
 			return
-		self.AddLog("Start WritingLogFile thread.", DEBUG)
+		self.add_log("Start writing_log_file thread.", DEBUG)
 		while True:
 			time.sleep(1)
-			self.TryWriteLogFile()
+			self.try_write_log_file()
 	#end define
 
-	def TryWriteLogFile(self):
+	def try_write_log_file(self):
 		try:
-			self.WriteLogFile()
+			self.write_log_file()
 		except Exception as err:
-			self.AddLog("TryWriteLogFile: {0}".format(err), ERROR)
+			self.add_log(f"try_write_log_file error: {err}", ERROR)
 	#end define
 
-	def WriteLogFile(self):
-		logFileName = self.buffer[_logFileName]
+	def write_log_file(self):
+		logFileName = self.buffer.log_file_name
 
 		with open(logFileName, 'a') as file:
-			while len(self.buffer[_logList]) > 0:
-				logText = self.buffer[_logList].pop(0)
+			while len(self.buffer.loglist) > 0:
+				logText = self.buffer.loglist.pop(0)
 				file.write(logText + '\n')
 			#end while
 		#end with
 
 		# Control log size
-		if self.db[_config][_isLimitLogFile] == False:
+		if self.db.config.is_limit_log_file == False:
 			return
-		allline = self.CountLines(logFileName)
+		allline = self.count_lines(logFileName)
 		if allline > 4096 + 256:
 			delline = allline - 4096
 			f=open(logFileName).readlines()
@@ -451,7 +446,7 @@ class MyPyClass:
 				F.writelines(f)
 	#end define
 
-	def CountLines(self, filename, chunk_size=1<<13):
+	def count_lines(self, filename, chunk_size=1<<13):
 		if not os.path.isfile(filename):
 			return 0
 		with open(filename) as file:
@@ -477,110 +472,185 @@ class MyPyClass:
 		return data
 	#end define
 
-	def Exit(self):
-		if len(self.buffer[_logList]) > 0:
+	def exit(self):
+		if len(self.buffer.loglist) > 0:
 			time.sleep(1.1)
-		if os.path.isfile(self.buffer[_pidFilePath]):
-			os.remove(self.buffer[_pidFilePath])
+		if os.path.isfile(self.buffer.pid_file_path):
+			os.remove(self.buffer.pid_file_path)
 		sys.exit(0)
 	#end define
 
-	def LocaldbSaving(self):
-		if self.db[_config][_isLocaldbSaving] == False:
+	def read_file(self, path):
+		with open(path, 'rt') as file:
+			text = file.read()
+		return text
+	#end define
+
+	def write_file(self, path, text=""):
+		with open(path, 'wt') as file:
+			file.write(text)
+	#end define
+
+	def read_db(self):
+		err = None
+		for i in range(10):
+			try:
+				return self.read_db_process()
+			except Exception as ex:
+				err = ex
+				time.sleep(0.01)
+		raise Exception(f"read_db error: {err}")
+	#end define
+
+	def read_db_process(self):
+		db_path = self.buffer.db_file_name
+		text = self.read_file(db_path)
+		return json.loads(text)
+	#end define
+
+	def write_db(self, data):
+		thr = threading.Thread(target=self.write_db_process, 
+			name="write_db_process", 
+			args=(data, ), 
+			daemon=False)
+		thr.start()
+		thr.join()
+	#end define
+
+	def write_db_process(self, data):
+		db_path = self.buffer.db_file_name
+		text = json.dumps(data, indent=4)
+		self.lock_file(db_path)
+		self.write_file(db_path, text)
+		self.unlock_file(db_path)
+	#end define
+
+	def lock_file(self, path):
+		pid_path = path + ".lock"
+		for i in range(300):
+			if os.path.isfile(pid_path):
+				time.sleep(0.01)
+			else:
+				self.write_file(pid_path)
+				return
+		raise Exception("lock_file error: time out.")
+	#end define
+
+	def unlock_file(self, path):
+		pid_path = path + ".lock"
+		try:
+			os.remove(pid_path)
+		except:
+			print("Wow. You are faster than me")
+	#end define
+
+	def merge_dict(self, local_data, file_data, old_file_data):
+		need_write_local_data = False
+		if local_data == file_data and file_data == old_file_data:
+			return need_write_local_data
+		#end if
+		
+		dict_keys = list()
+		dict_keys += [key for key in local_data if key not in dict_keys]
+		dict_keys += [key for key in file_data if key not in dict_keys]
+		for key in dict_keys:
+			local_item = local_data.get(key)
+			file_item = file_data.get(key)
+			old_file_item = old_file_data.get(key)
+			local_item_type = type(local_item)
+			file_item_type = type(file_item)
+			old_file_item_type = type(file_item)
+			if local_item != file_item and local_item_type == dict and file_item_type == dict and old_file_item_type == dict:
+				buff = self.merge_dict(local_item, file_item, old_file_item)
+				if buff is True:
+					need_write_local_data = True
+			elif local_item != old_file_item and file_item == old_file_item:
+				#print(f"find db change {key}: {old_file_item} -> {local_item}")
+				old_file_data[key] = local_item
+				need_write_local_data = True
+			elif local_item == old_file_item and file_item != old_file_item:
+				#print(f"find config file change {key}: {old_file_item} -> {file_item}")
+				old_file_data[key] = file_item
+				local_data[key] = file_item
+			elif local_item != old_file_item and file_item != old_file_item:
+				#print(f"find db and config file change {key}: {old_file_item} -> {file_item} <- {local_item}")
+				old_file_data[key] = file_item
+				local_data[key] = file_item
+		return need_write_local_data
+	#end define
+
+	def save_db(self):
+		data = self.read_db()
+		buff = self.merge_dict(self.db, data, self.buffer.old_db)
+		if buff is True:
+			self.write_db(self.db)
+	#end define
+	
+	def db_saving(self):
+		if self.db.config.is_db_saving == False:
 			return
-		self.AddLog("Start LocaldbSaving thread.", DEBUG)
+		self.add_log("Start db_saving thread.", DEBUG)
 		while True:
-			time.sleep(10) # 10 sec
-			threading.Thread(target=self.dbSave).start()
+			time.sleep(3) # 3 sec
+			self.save_db()
 	#end define
 
-	def TryLocaldbSave(self):
-		try:
-			self.dbSave()
-		except Exception as err:
-			self.AddLog("TryLocaldbSave: {0}".format(err), ERROR)
-	#end define
-
-	def dbSave(self):
-		fileName = self.buffer[_localdbFileName]
-		#if "oldDb" in self.buffer:
-		#	try:
-		#		file = open(fileName, 'r')
-		#		buffString = file.read()
-		#		file.close()
-		#		oldDb = self.buffer.get("oldDb")
-		#		buffData = json.loads(buffString)
-		#		for name, value in buffData.items():
-		#			oldValue = oldDb.get(name)
-		#			if oldValue != value:
-		#				self.db[name] = value
-		#		#end for
-		#	except:
-		#		pass
-		with open(fileName, 'wt') as file:
-			#self.buffer["oldDb"] = copy.deepcopy(self.db)
-			string = json.dumps(self.db, indent=4)
-			file.write(string)
-	#end define
-
-	def dbLoad(self, fileName=False):
+	def load_db(self, db_path=False):
 		result = False
-		if not fileName:
-			fileName = self.buffer[_localdbFileName]
+		if not db_path:
+			db_path = self.buffer.db_file_name
 		try:
-			file = open(fileName, 'r')
-			original = file.read()
-			file.close()
-			arr = json.loads(original)
-			self.db.update(arr)
-			self.SetDefaultConfig()
+			data = read_db()
+			self.db.update(data)
+			self.buffer.old_db.update(data)
+			self.set_default_config()
 			result = True
 		except Exception as err:
-			self.AddLog("dbLoad: {0}".format(err), WARNING)
+			self.add_log(f"load_db error: {err}", ERROR)
 		return result
 	#end define
 
-	def GetSettings(self, filePath):
+	def get_settings(self, filePath):
 		try:
 			file = open(filePath)
 			text = file.read()
 			file.close()
 			self.db = json.loads(text)
-			self.dbSave()
+			self.db_save()
 			print("get setting successful: " + filePath)
-			self.Exit()
+			self.exit()
 		except Exception as err:
-			self.AddLog("GetSettings: {0}".format(err), WARNING)
+			self.add_log(f"get_settings error: {err}", WARNING)
 	#end define
 
-	def Python3Path(self):
-		python3 = "/usr/bin/python3"
+	def get_python3_path(self):
+		python3_path = "/usr/bin/python3"
 		if platform.system() == "OpenBSD":
-			python3 = "/usr/local/bin/python3"
-		return python3
+			python3_path = "/usr/local/bin/python3"
+		return python3_path
 	# end define
 
-	def ForkDaemon(self):
-		myPath = self.buffer[_myPath]
-		python3 = self.Python3Path()
-		cmd = " ".join([python3, myPath, "-ef", '&'])
+	def fork_daemon(self):
+		my_path = self.buffer.my_path
+		python3_path = self.get_python3_path()
+		cmd = " ".join([python3_path, my_path, "-ef", '&'])
 		os.system(cmd)
-		print("daemon start: " + myPath)
-		self.Exit()
+		print("daemon start: " + my_path)
+		self.exit()
 	#end define
 
-	def AddToCrone(self):
-		python3 = self.Python3Path()
-		cronText = "@reboot {python3} \"{path}\" -d\n".format(path=self.buffer[_myPath],python3=python3)
+	def add_to_crone(self):
+		python3_path = self.get_python3_path()
+		cronText = f"@reboot {python3_path} \"{self.buffer.my_path}\" -d\n"
 		os.system("crontab -l > mycron")
 		with open("mycron", 'a') as file:
 			file.write(cronText)
 		os.system("crontab mycron && rm mycron")
 		print("add to cron successful: " + cronText)
-		self.Exit()
+		self.exit()
 	#end define
 
-	def TryFunction(self, func, **kwargs):
+	def try_function(self, func, **kwargs):
 		args = kwargs.get("args")
 		result = None
 		try:
@@ -589,49 +659,47 @@ class MyPyClass:
 			else:
 				result = func(*args)
 		except Exception as err:
-			text = "{funcName} error: {err}".format(funcName=func.__name__, err=err)
-			self.AddLog(text, "error")
+			self.add_log(f"{func.__name__} error: {err}", ERROR)
 		return result
 	#end define
 
-	def StartThread(self, func, **kwargs):
+	def start_thread(self, func, **kwargs):
 		name = kwargs.get("name", func.__name__)
 		args = kwargs.get("args")
 		if args is None:
 			threading.Thread(target=func, name=name, daemon=True).start()
 		else:
 			threading.Thread(target=func, name=name, args=args, daemon=True).start()
-		self.AddLog("Thread {name} started".format(name=name), "debug")
+		self.add_log("Thread {name} started".format(name=name), "debug")
 	#end define
 
-	def Cycle(self, func, sec, args):
+	def cycle(self, func, sec, args):
 		while True:
-			self.TryFunction(func, args=args)
+			self.try_function(func, args=args)
 			time.sleep(sec)
 	#end define
 
-	def StartCycle(self, func, **kwargs):
+	def start_cycle(self, func, **kwargs):
 		name = kwargs.get("name", func.__name__)
 		args = kwargs.get("args")
 		sec = kwargs.get("sec")
-		self.StartThread(self.Cycle, name=name, args=(func, sec, args))
+		self.start_thread(self.cycle, name=name, args=(func, sec, args))
 	#end define
 
-	def InitTranslator(self, filePath=None):
+	def init_translator(self, filePath=None):
 		if filePath is None:
-			filePath = self.db.get("translateFilePath")
+			filePath = self.db.translate_file_path
 		file = open(filePath, encoding="utf-8")
 		text = file.read()
 		file.close()
-		self.buffer["translate"] = json.loads(text)
+		self.buffer.translate = json.loads(text)
 	#end define
 
-	def Translate(self, text):
-		lang = self.GetLang()
-		translate = self.buffer.get("translate")
-		textList = text.split(' ')
-		for item in textList:
-			sitem = translate.get(item)
+	def translate(self, text):
+		lang = self.get_lang()
+		text_list = text.split(' ')
+		for item in text_list:
+			sitem = self.buffer.translate.get(item)
 			if sitem is None:
 				continue
 			ritem = sitem.get(lang)
@@ -641,7 +709,7 @@ class MyPyClass:
 	#end define
 #end class
 
-def GetHashMd5(fileName):
+def get_hash_md5(fileName):
 	BLOCKSIZE = 65536
 	hasher = hashlib.md5()
 	with open(fileName, 'rb') as file:
@@ -652,7 +720,7 @@ def GetHashMd5(fileName):
 	return(hasher.hexdigest())
 #end define
 
-def Pars(text, search, search2=None):
+def parse(text, search, search2=None):
 	if search is None or text is None:
 		return None
 	if search not in text:
@@ -663,7 +731,7 @@ def Pars(text, search, search2=None):
 	return text
 #end define
 
-def Ping(hostname):
+def ping(hostname):
 	process = subprocess.run(["ping", "-c", 1, "-w", 3, hostname], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 	if process.returncode == 0:
 		result = True
@@ -672,7 +740,7 @@ def Ping(hostname):
 	return result
 #end define
 
-def GetRequest(url):
+def get_request(url):
 	link = urlopen(url)
 	data = link.read()
 	text = data.decode("utf-8")
@@ -689,13 +757,13 @@ def b2mb(item):
 	return round(int(item)/1000/1000, 2)
 #end define
 
-def SearchFileInDir(path, fileName):
+def search_file_in_dir(path, fileName):
 	result = None
 	for entry in os.scandir(path):
 		if entry.name.startswith('.'):
 			continue
 		if entry.is_dir():
-			buff = SearchFileInDir(entry.path, fileName)
+			buff = search_file_in_dir(entry.path, fileName)
 			if buff is not None:
 				result = buff
 				break
@@ -706,7 +774,7 @@ def SearchFileInDir(path, fileName):
 	return result
 #end define
 
-def SearchDirInDir(path, dirName):
+def search_dir_in_dir(path, dirName):
 	result = None
 	for entry in os.scandir(path):
 		if entry.name.startswith('.'):
@@ -715,22 +783,22 @@ def SearchDirInDir(path, dirName):
 			if entry.name == dirName:
 				result = entry.path
 				break
-			buff = SearchDirInDir(entry.path, dirName)
+			buff = search_dir_in_dir(entry.path, dirName)
 			if buff is not None:
 				result = buff
 				break
 	return result
 #end define
 
-def GetDirFromPath(path):
+def get_dir_from_path(path):
 	return path[:path.rfind('/')+1]
 #end define
 
-def GetFullNameFromPath(path):
+def get_full_name_from_path(path):
 	return path[path.rfind('/')+1:]
 #end define
 
-def PrintTable(arr):
+def print_table(arr):
 	buff = dict()
 	for i in range(len(arr[0])):
 		buff[i] = list()
@@ -747,11 +815,11 @@ def PrintTable(arr):
 		print()
 #end define
 
-def GetTimestamp():
+def get_timestamp():
 	return int(time.time())
 #end define
 
-def ColorText(text):
+def color_text(text):
 	for cname in bcolors.colors:
 		item = '{' + cname + '}'
 		if item in text:
@@ -759,12 +827,12 @@ def ColorText(text):
 	return text
 #end define
 
-def ColorPrint(text):
-	text = ColorText(text)
+def color_print(text):
+	text = color_text(text)
 	print(text)
 #end define
 
-def GetLoadAvg():
+def get_load_avg():
 	psys=platform.system()
 	if psys in ['FreeBSD','Darwin','OpenBSD']:
 		loadavg = subprocess.check_output(["sysctl", "-n", "vm.loadavg"]).decode('utf-8')
@@ -788,33 +856,33 @@ def GetLoadAvg():
 	return output
 #end define
 
-def GetInternetInterfaceName():
+def get_internet_interface_name():
 	if platform.system() == "OpenBSD":
 		cmd="ifconfig egress"
 		text = subprocess.getoutput(cmd)
 		lines = text.split('\n')
 		items = lines[0].split(' ')
-		interfaceName = items[0][:-1]
+		interface_name = items[0][:-1]
 	else:
 		cmd = "ip --json route"
 		text = subprocess.getoutput(cmd)
 		try:
 			arr = json.loads(text)
-			interfaceName = arr[0]["dev"]
+			interface_name = arr[0]["dev"]
 		except:
 			lines = text.split('\n')
 			items = lines[0].split(' ')
 			buff = items.index("dev")
-			interfaceName = items[buff+1]
-	return interfaceName
+			interface_name = items[buff+1]
+	return interface_name
 #end define
 
-def Sleep():
+def thr_sleep():
 	while True:
 		time.sleep(10)
 #end define
 
-def Timestamp2Datetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
+def timestamp2datetime(timestamp, format="%d.%m.%Y %H:%M:%S"):
 	datetime = time.localtime(timestamp)
 	result = time.strftime(format, datetime)
 	return result
@@ -881,7 +949,11 @@ def dec2hex(dec):
 	return h
 #end define
 
-def RunAsRoot(args):
+def hex2dec(h):
+	return int(h, base=16)
+#end define
+
+def run_as_root(args):
 	text = platform.version()
 	psys = platform.system()
 	if "Ubuntu" in text:
@@ -891,11 +963,11 @@ def RunAsRoot(args):
 	else :
 		print("Enter root password")
 		args = ["su", "-c"] + [" ".join(args)]
-	exitCode = subprocess.call(args)
-	return exitCode
+	exit_code = subprocess.call(args)
+	return exit_code
 #end define
 
-def Add2Systemd(**kwargs):
+def add2systemd(**kwargs):
 	name = kwargs.get("name")
 	start = kwargs.get("start")
 	post = kwargs.get("post", "/bin/echo service down")
@@ -980,19 +1052,23 @@ def ip2int(addr):
 	return struct.unpack("!i", socket.inet_aton(addr))[0]
 #end define
 
-def GetServiceStatus(name):
+def int2ip(dec):
+	return socket.inet_ntoa(struct.pack("!i", dec))
+#end define
+
+def get_service_status(name):
 	status = False
 	psys = platform.system()
 	if psys == "OpenBSD":
-		result = os.system("rcctl check {name}".format(name=name))
+		result = os.system(f"rcctl check {name}")
 	else:
-		result = os.system("systemctl is-active --quiet {name}".format(name=name))
+		result = os.system(f"systemctl is-active --quiet {name}")
 	if result == 0:
 		status = True
 	return status
 #end define
 
-def GetServiceUptime(name):
+def get_service_uptime(name):
 	property = "ExecMainStartTimestampMonotonic"
 	args = ["systemctl", "show", name, "--property=" + property]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
@@ -1000,7 +1076,7 @@ def GetServiceUptime(name):
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
 		return
-	startTimestampMonotonic = Pars(output, f"{property}=", '\n')
+	startTimestampMonotonic = parse(output, f"{property}=", '\n')
 	startTimestampMonotonic = int(startTimestampMonotonic) / 10**6
 	bootTimestamp = psutil.boot_time()
 	timeNow = time.time()
@@ -1009,7 +1085,7 @@ def GetServiceUptime(name):
 	return uptime
 #end define
 
-def GetServicePid(name):
+def get_service_pid(name):
 	property = "MainPID"
 	args = ["systemctl", "show", name, "--property=" + property]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=3)
@@ -1017,15 +1093,15 @@ def GetServicePid(name):
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
 		return
-	pid = int(Pars(output, f"{property}=", '\n'))
+	pid = int(parse(output, f"{property}=", '\n'))
 	return pid
 #end define
 
-def GetGitHash(gitPath, short=False):
+def get_git_hash(git_path, short=False):
 	args = ["git", "rev-parse", "HEAD"]
 	if short is True:
 		args.insert(2, '--short')
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path, timeout=3)
 	output = process.stdout.decode("utf-8")
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
@@ -1034,10 +1110,10 @@ def GetGitHash(gitPath, short=False):
 	return buff[0]
 #end define
 
-def GetGitUrl(gitPath):
+def get_git_url(git_path):
 	args = ["git", "remote", "-v"]
 	try:
-		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
+		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path, timeout=3)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 	except Exception as ex:
@@ -1054,10 +1130,10 @@ def GetGitUrl(gitPath):
 	return url
 #end define
 
-def GetGitAuthorAndRepo(gitPath):
+def get_git_author_and_repo(git_path):
 	author = None
 	repo = None
-	url = GetGitUrl(gitPath)
+	url = get_git_url(git_path)
 	if url is not None:
 		buff = url.split('/')
 		if len(buff) == 5:
@@ -1068,23 +1144,23 @@ def GetGitAuthorAndRepo(gitPath):
 	return author, repo
 #end define
 
-def GetGitLastRemoteCommit(gitPath, branch="master"):
-	author, repo = GetGitAuthorAndRepo(gitPath)
+def get_git_last_remote_commit(git_path, branch="master"):
+	author, repo = get_git_author_and_repo(git_path)
 	if author is None or repo is None:
 		return
-	url = "https://api.github.com/repos/{author}/{repo}/branches/{branch}".format(author=author, repo=repo, branch=branch)
+	url = f"https://api.github.com/repos/{author}/{repo}/branches/{branch}"
 	sha = None
 	try:
-		text = GetRequest(url)
+		text = get_request(url)
 		data = json.loads(text)
 		sha = data["commit"]["sha"]
 	except URLError: pass
 	return sha
 #end define
 
-def GetGitBranch(gitPath):
+def get_git_branch(git_path):
 	args = ["git", "branch", "-v"]
-	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=gitPath, timeout=3)
+	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path, timeout=3)
 	output = process.stdout.decode("utf-8")
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
@@ -1099,10 +1175,10 @@ def GetGitBranch(gitPath):
 	return branch
 #end define
 
-def CheckGitUpdate(gitPath):
-	branch = GetGitBranch(gitPath)
-	newHash = GetGitLastRemoteCommit(gitPath, branch)
-	oldHash = GetGitHash(gitPath)
+def check_git_update(git_path):
+	branch = get_git_branch(git_path)
+	newHash = get_git_last_remote_commit(git_path, branch)
+	oldHash = get_git_hash(git_path)
 	result = False
 	if oldHash != newHash:
 		result = True

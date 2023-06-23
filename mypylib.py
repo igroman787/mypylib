@@ -610,14 +610,14 @@ class MyPyClass:
 		return result
 	#end define
 
-	def get_settings(self, filePath):
+	def get_settings(self, file_path):
 		try:
-			file = open(filePath)
+			file = open(file_path)
 			text = file.read()
 			file.close()
 			self.db = json.loads(text)
 			self.save_db()
-			print("get setting successful: " + filePath)
+			print("get setting successful: " + file_path)
 			self.exit()
 		except Exception as err:
 			self.add_log(f"get_settings error: {err}", WARNING)
@@ -641,12 +641,12 @@ class MyPyClass:
 
 	def add_to_crone(self):
 		python3_path = self.get_python3_path()
-		cronText = f"@reboot {python3_path} \"{self.buffer.my_path}\" -d\n"
+		cron_text = f"@reboot {python3_path} \"{self.buffer.my_path}\" -d\n"
 		os.system("crontab -l > mycron")
 		with open("mycron", 'a') as file:
-			file.write(cronText)
+			file.write(cron_text)
 		os.system("crontab mycron && rm mycron")
-		print("add to cron successful: " + cronText)
+		print("add to cron successful: " + cron_text)
 		self.exit()
 	#end define
 
@@ -686,10 +686,10 @@ class MyPyClass:
 		self.start_thread(self.cycle, name=name, args=(func, sec, args))
 	#end define
 
-	def init_translator(self, filePath=None):
-		if filePath is None:
-			filePath = self.db.translate_file_path
-		file = open(filePath, encoding="utf-8")
+	def init_translator(self, file_path=None):
+		if file_path is None:
+			file_path = self.db.translate_file_path
+		file = open(file_path, encoding="utf-8")
 		text = file.read()
 		file.close()
 		self.buffer.translate = json.loads(text)
@@ -709,14 +709,14 @@ class MyPyClass:
 	#end define
 #end class
 
-def get_hash_md5(fileName):
-	BLOCKSIZE = 65536
+def get_hash_md5(file_name):
+	blocksize = 65536
 	hasher = hashlib.md5()
-	with open(fileName, 'rb') as file:
-		buf = file.read(BLOCKSIZE)
+	with open(file_name, 'rb') as file:
+		buf = file.read(blocksize)
 		while len(buf) > 0:
 			hasher.update(buf)
-			buf = file.read(BLOCKSIZE)
+			buf = file.read(blocksize)
 	return hasher.hexdigest()
 #end define
 
@@ -747,43 +747,43 @@ def get_request(url):
 	return text
 #end define
 
-def dir(inputDir):
-	if (inputDir[-1:] != '/'):
-		inputDir += '/'
-	return inputDir
+def dir(input_dir):
+	if input_dir[-1:] != '/':
+		input_dir += '/'
+	return input_dir
 #end define
 
 def b2mb(item):
 	return round(int(item) / 1000 / 1000, 2)
 #end define
 
-def search_file_in_dir(path, fileName):
+def search_file_in_dir(path, file_name):
 	result = None
 	for entry in os.scandir(path):
 		if entry.name.startswith('.'):
 			continue
 		if entry.is_dir():
-			buff = search_file_in_dir(entry.path, fileName)
+			buff = search_file_in_dir(entry.path, file_name)
 			if buff is not None:
 				result = buff
 				break
 		elif entry.is_file():
-			if entry.name == fileName:
+			if entry.name == file_name:
 				result = entry.path
 				break
 	return result
 #end define
 
-def search_dir_in_dir(path, dirName):
+def search_dir_in_dir(path, dir_name):
 	result = None
 	for entry in os.scandir(path):
 		if entry.name.startswith('.'):
 			continue
 		if entry.is_dir():
-			if entry.name == dirName:
+			if entry.name == dir_name:
 				result = entry.path
 				break
-			buff = search_dir_in_dir(entry.path, dirName)
+			buff = search_dir_in_dir(entry.path, dir_name)
 			if buff is not None:
 				result = buff
 				break
@@ -1075,12 +1075,12 @@ def get_service_uptime(name):
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
 		return
-	startTimestampMonotonic = parse(output, f"{property}=", '\n')
-	startTimestampMonotonic = int(startTimestampMonotonic) / 10 ** 6
-	bootTimestamp = psutil.boot_time()
-	timeNow = time.time()
-	startTimestamp = bootTimestamp + startTimestampMonotonic
-	uptime = int(timeNow - startTimestamp)
+	start_timestamp_monotonic = parse(output, f"{property}=", '\n')
+	start_timestamp_monotonic = int(start_timestamp_monotonic) / 10 ** 6
+	boot_timestamp = psutil.boot_time()
+	time_now = time.time()
+	start_timestamp = boot_timestamp + start_timestamp_monotonic
+	uptime = int(time_now - start_timestamp)
 	return uptime
 #end define
 
@@ -1101,7 +1101,7 @@ def get_git_hash(git_path, short=False):
 	if short is True:
 		args.insert(2, '--short')
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path,
-							 timeout=3)
+							timeout=3)
 	output = process.stdout.decode("utf-8")
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
@@ -1114,7 +1114,7 @@ def get_git_url(git_path):
 	args = ["git", "remote", "-v"]
 	try:
 		process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-								 cwd=git_path, timeout=3)
+								cwd=git_path, timeout=3)
 		output = process.stdout.decode("utf-8")
 		err = process.stderr.decode("utf-8")
 	except Exception as ex:
@@ -1163,7 +1163,7 @@ def get_git_last_remote_commit(git_path, branch="master"):
 def get_git_branch(git_path):
 	args = ["git", "branch", "-v"]
 	process = subprocess.run(args, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, cwd=git_path,
-							 timeout=3)
+							timeout=3)
 	output = process.stdout.decode("utf-8")
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
@@ -1180,12 +1180,12 @@ def get_git_branch(git_path):
 
 def check_git_update(git_path):
 	branch = get_git_branch(git_path)
-	newHash = get_git_last_remote_commit(git_path, branch)
-	oldHash = get_git_hash(git_path)
+	new_hash = get_git_last_remote_commit(git_path, branch)
+	old_hash = get_git_hash(git_path)
 	result = False
-	if oldHash != newHash:
+	if old_hash != new_hash:
 		result = True
-	if oldHash is None or newHash is None:
+	if old_hash is None or new_hash is None:
 		result = None
 	return result
 #end define

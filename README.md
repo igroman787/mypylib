@@ -10,14 +10,14 @@ local = MyPyClass(__file__)
 
 def Config():
 	# Нижеприведенная настройка является не обязательным.
-	local.db["config"]["isStartOnlyOneProcess"] = False		# Отключить защиту на запуск единственного процесса. По умолчанию = True
-	local.db["config"]["isLimitLogFile"] = False			# Отключить контроль размера файла логирования. По умолчанию = True
-	local.db["config"]["isDeleteOldLogFile"] = True			# Включить удаление файла логирования перед запуском. По умолчанию = False
-	local.db["config"]["isIgnorLogWarning"] = True			# Включить игнорирование предупреждений. По умолчанию = False
-	local.db["config"]["memoryUsinglimit"] = 20				# Установить лимит контроля использования памяти в Мб. По умолчанию = 50
-	local.db["config"]["isLocaldbSaving"] = True			# Сохранять локальную БД (local.db) в файл. По умолчанию = False
-	local.db["config"]["isWritingLogFile"] = False			# Отключить запсиь логов в файл. По умолчанию = True
-	local.db["config"]["logLevel"] = "debug"				# Уровень логирования. По умолчанию = info
+	local.db.config.isStartOnlyOneProcess = False		# Отключить защиту на запуск единственного процесса. По умолчанию = True
+	local.db.config.isLimitLogFile = False				# Отключить контроль размера файла логирования. По умолчанию = True
+	local.db.config.isDeleteOldLogFile = True			# Включить удаление файла логирования перед запуском. По умолчанию = False
+	local.db.config.isIgnorLogWarning = True				# Включить игнорирование предупреждений. По умолчанию = False
+	local.db.config.memoryUsinglimit = 20					# Установить лимит контроля использования памяти в Мб. По умолчанию = 50
+	local.db.config.isLocaldbSaving = True						# Сохранять локальную БД (local.db) в файл. По умолчанию = False
+	local.db.config.isWritingLogFile = False				# Отключить запсиь логов в файл. По умолчанию = True
+	local.db.config.logLevel = "debug"						# Уровень логирования. По умолчанию = info
 #end define
 
 def General(args):

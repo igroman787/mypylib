@@ -146,13 +146,12 @@ class MyPyClass:
 		self.db.config = Dict()
 
 		self.buffer = Dict()
-		self.buffer.loglist = list()
+		self.buffer.old_db = Dict()
+		self.buffer.log_list = list()
 		self.buffer.thread_count = None
 		self.buffer.memory_using = None
 		self.buffer.free_space_memory = None
-
-		# Set default settings
-		self.set_default_config()
+		
 		self.refresh()
 	#end define
 
@@ -169,10 +168,22 @@ class MyPyClass:
 		self.buffer.log_file_name = my_work_dir + my_name + ".log"
 		self.buffer.db_path = my_work_dir + my_name + ".db"
 		self.buffer.pid_file_path = my_work_dir + my_name + ".pid"
-
+		
 		# Check all directorys
 		os.makedirs(self.buffer.my_work_dir, exist_ok=True)
 		os.makedirs(self.buffer.my_temp_dir, exist_ok=True)
+		
+		# Load local database
+		self.load_db()
+		self.set_default_config()
+		if self.db.config.isLocaldbSaving is True:
+			self.start_cycle(self.save_db, sec=1)
+		#end if
+		
+		# Remove old log file
+		if self.db.config.isDeleteOldLogFile and os.path.isfile(self.buffer.log_file_name):
+			os.remove(self.buffer.log_file_name)
+		#end if
 	#end define
 
 	def run(self):
@@ -191,43 +202,37 @@ class MyPyClass:
 			self.add_to_crone()
 
 		# Start only one process (exit if process exist)
-		if self.db.config.is_start_only_one_process:
+		if self.db.config.isStartOnlyOneProcess:
 			self.start_only_one_process()
-
-		# Load local database
-		self.load_db()
-
-		# Remove old log file
-		if self.db.config.is_delete_old_log_file and os.path.isfile(self.buffer.log_file_name):
-			os.remove(self.buffer.log_file_name)
+		#end if
 
 		# Start other threads
-		threading.Thread(target=self.writing_log_file, name="Logging", daemon=True).start()
-		threading.Thread(target=self.self_testing, name="self_testing", daemon=True).start()
-		threading.Thread(target=self.db_saving, name="LocdbSaving", daemon=True).start()
+		self.start_cycle(self.self_test, sec=1)
+		if self.db.config.isWritingLogFile is True:
+			self.start_cycle(self.write_log, sec=1)
 		self.buffer.thread_count_old = threading.active_count()
 
 		# Logging the start of the program
-		self.add_log("Start program `{self.buffer.my_path}`")
+		self.add_log(f"Start program `{self.buffer.my_path}`")
 	#end define
 
 	def set_default_config(self):
-		if self.db.config.log_level is None:
-			self.db.config.log_level = INFO  # info || debug
-		if self.db.config.is_limit_log_file is None:
-			self.db.config.is_limit_log_file = True
-		if self.db.config.is_delete_old_log_file is None:
-			self.db.config.is_delete_old_log_file = False
-		if self.db.config.is_ignor_log_warning is None:
-			self.db.config.is_ignor_log_warning = False
-		if self.db.config.is_start_only_one_process is None:
-			self.db.config.is_start_only_one_process = True
-		if self.db.config.memory_using_limit is None:
-			self.db.config.memory_using_limit = 50
-		if self.db.config.is_db_saving is None:
-			self.db.config.is_db_saving = False
-		if self.db.config.is_writing_log_file is None:
-			self.db.config.is_writing_log_file = True
+		if self.db.config.logLevel is None:
+			self.db.config.logLevel = INFO  # info || debug
+		if self.db.config.isLimitLogFile is None:
+			self.db.config.isLimitLogFile = True
+		if self.db.config.isDeleteOldLogFile is None:
+			self.db.config.isDeleteOldLogFile = False
+		if self.db.config.isIgnorLogWarning is None:
+			self.db.config.isIgnorLogWarning = False
+		if self.db.config.isStartOnlyOneProcess is None:
+			self.db.config.isStartOnlyOneProcess = True
+		if self.db.config.memoryUsinglimit is None:
+			self.db.config.memoryUsinglimit = 50
+		if self.db.config.isLocaldbSaving is None:
+			self.db.config.isLocaldbSaving = False
+		if self.db.config.isWritingLogFile is None:
+			self.db.config.isWritingLogFile = True
 	#end define
 
 	def start_only_one_process(self):
@@ -245,7 +250,7 @@ class MyPyClass:
 			if full_process_name.find(self.buffer.my_full_name) > -1:
 				print("The process is already running")
 				sys.exit(1)
-		# end if
+		#end if
 		self.write_pid()
 	#end define
 
@@ -257,16 +262,6 @@ class MyPyClass:
 			file.write(pid_str)
 	#end define
 
-	def self_testing(self):
-		self.add_log("Start self_testing thread.", DEBUG)
-		while True:
-			try:
-				time.sleep(1)
-				self.self_test()
-			except Exception as err:
-				self.add_log(f"self_testing: {err}", ERROR)
-	#end define
-
 	def self_test(self):
 		process = psutil.Process(os.getpid())
 		memory_using = b2mb(process.memory_info().rss)
@@ -275,8 +270,8 @@ class MyPyClass:
 		self.buffer.free_space_memory = free_space_memory
 		self.buffer.memory_using = memory_using
 		self.buffer.thread_count = thread_count
-		if memory_using > self.db.config.memory_using_limit:
-			self.db.config.memory_using_limit += 50
+		if memory_using > self.db.config.memoryUsinglimit:
+			self.db.config.memoryUsinglimit += 50
 			self.add_log(f"Memory using: {memory_using}Mb, free: {free_space_memory}Mb", WARNING)
 	#end define
 
@@ -372,9 +367,9 @@ class MyPyClass:
 		time_text = "{0} (UTC)".format(time_text).ljust(32, ' ')
 
 		# Pass if set log level
-		if self.db.config.log_level != DEBUG and mode == DEBUG:
+		if self.db.config.logLevel != DEBUG and mode == DEBUG:
 			return
-		elif self.db.config.is_ignor_log_warning and mode == WARNING:
+		elif self.db.config.isIgnorLogWarning and mode == WARNING:
 			return
 
 		# Set color mode
@@ -400,40 +395,24 @@ class MyPyClass:
 		log_text = mode_text + time_text + thread_text + input_text
 
 		# Queue for recording
-		self.buffer.loglist.append(log_text)
+		self.buffer.log_list.append(log_text)
 
 		# Print log text
 		print(log_text)
 	#end define
 
-	def writing_log_file(self):
-		if self.db.config.is_writing_log_file is False:
-			return
-		self.add_log("Start writing_log_file thread.", DEBUG)
-		while True:
-			time.sleep(1)
-			self.try_write_log_file()
-	#end define
-
-	def try_write_log_file(self):
-		try:
-			self.write_log_file()
-		except Exception as err:
-			self.add_log(f"try_write_log_file error: {err}", ERROR)
-	#end define
-
-	def write_log_file(self):
+	def write_log(self):
 		log_file_name = self.buffer.log_file_name
 
 		with open(log_file_name, 'a') as file:
-			while len(self.buffer.loglist) > 0:
-				log_text = self.buffer.loglist.pop(0)
+			while len(self.buffer.log_list) > 0:
+				log_text = self.buffer.log_list.pop(0)
 				file.write(log_text + '\n')
-		# end while
-		# end with
+			#end while
+		#end with
 
 		# Control log size
-		if self.db.config.is_limit_log_file is False:
+		if self.db.config.isLimitLogFile is False:
 			return
 		allline = self.count_lines(log_file_name)
 		if allline > 4096 + 256:
@@ -474,7 +453,7 @@ class MyPyClass:
 	#end define
 
 	def exit(self):
-		if len(self.buffer.loglist) > 0:
+		if len(self.buffer.log_list) > 0:
 			time.sleep(1.1)
 		if os.path.isfile(self.buffer.pid_file_path):
 			os.remove(self.buffer.pid_file_path)
@@ -499,20 +478,23 @@ class MyPyClass:
 				return self.read_db_process(db_path)
 			except Exception as ex:
 				err = ex
-				time.sleep(0.01)
+				time.sleep(0.1)
 		raise Exception(f"read_db error: {err}")
 	#end define
 
 	def read_db_process(self, db_path):
 		text = self.read_file(db_path)
-		return json.loads(text)
+		data = json.loads(text)
+		return Dict(data)
 	#end define
 
 	def write_db(self, data):
-		thr = threading.Thread(target=self.write_db_process,
-							name="write_db_process",
-							args=(data,),
-							daemon=False)
+		thr = threading.Thread(
+			target=self.write_db_process,
+			name="write_db_process",
+			args=(data,),
+			daemon=False
+		)
 		thr.start()
 		thr.join()
 	#end define
@@ -543,14 +525,28 @@ class MyPyClass:
 		except:
 			print("Wow. You are faster than me")
 	#end define
+	
+	def merge_two_dicts(self, local_data, file_data):
+		dict_type_list = [dict, Dict]
+		for key in file_data:
+			local_item = local_data.get(key)
+			file_item = file_data.get(key)
+			local_item_type = type(local_item)
+			file_item_type = type(file_item)
+			if local_item != file_item and local_item_type in dict_type_list and file_item_type in dict_type_list:
+				self.merge_two_dicts(local_item, file_item)
+			elif local_item != file_item:
+				local_data[key] = file_item
+	#end define
 
-	def merge_dict(self, local_data, file_data, old_file_data):
+	def merge_three_dicts(self, local_data, file_data, old_file_data):
 		need_write_local_data = False
 		if local_data == file_data and file_data == old_file_data:
 			return need_write_local_data
-		# end if
+		#end if
 
 		dict_keys = list()
+		dict_type_list = [dict, Dict]
 		dict_keys += [key for key in local_data if key not in dict_keys]
 		dict_keys += [key for key in file_data if key not in dict_keys]
 		for key in dict_keys:
@@ -560,49 +556,42 @@ class MyPyClass:
 			local_item_type = type(local_item)
 			file_item_type = type(file_item)
 			old_file_item_type = type(file_item)
-			if local_item != file_item and local_item_type == dict and file_item_type == dict and old_file_item_type == dict:
-				buff = self.merge_dict(local_item, file_item, old_file_item)
+			if local_item != file_item and local_item_type in dict_type_list and file_item_type in dict_type_list and old_file_item_type in dict_type_list:
+				buff = self.merge_three_dicts(local_item, file_item, old_file_item)
 				if buff is True:
 					need_write_local_data = True
 			elif local_item != old_file_item and file_item == old_file_item:
-				# print(f"find db change {key}: {old_file_item} -> {local_item}")
+				#print(f"find db change {key}: {old_file_item} -> {local_item}")
 				old_file_data[key] = local_item
 				need_write_local_data = True
 			elif local_item == old_file_item and file_item != old_file_item:
-				# print(f"find config file change {key}: {old_file_item} -> {file_item}")
+				#print(f"find config file change {key}: {old_file_item} -> {file_item}")
 				old_file_data[key] = file_item
 				local_data[key] = file_item
 			elif local_item != old_file_item and file_item != old_file_item:
-				# print(f"find db and config file change {key}: {old_file_item} -> {file_item} <- {local_item}")
+				#print(f"find db and config file change {key}: {old_file_item} -> {file_item} <- {local_item}")
 				old_file_data[key] = file_item
 				local_data[key] = file_item
 		return need_write_local_data
 	#end define
 
 	def save_db(self):
-		data = self.read_db(self.buffer.db_path)
-		buff = self.merge_dict(self.db, data, self.buffer.old_db)
-		if buff is True:
+		file_data = self.read_db(self.buffer.db_path)
+		need_write_local_data = self.merge_three_dicts(self.db, file_data, self.buffer.old_db)
+		if need_write_local_data is True:
 			self.write_db(self.db)
-	#end define
-
-	def db_saving(self):
-		if self.db.config.is_db_saving is False:
-			return
-		self.add_log("Start db_saving thread.", DEBUG)
-		while True:
-			time.sleep(3)  # 3 sec
-			self.save_db()
 	#end define
 
 	def load_db(self, db_path=False):
 		result = False
 		if not db_path:
 			db_path = self.buffer.db_path
+		if not os.path.isfile(db_path):
+			self.write_db(self.db)
 		try:
-			data = self.read_db(db_path)
-			self.db.update(data)
-			self.buffer.old_db.update(data)
+			file_data = self.read_db(db_path)
+			self.merge_two_dicts(self.db, file_data)
+			self.merge_two_dicts(self.buffer.old_db, file_data)
 			self.set_default_config()
 			result = True
 		except Exception as err:
@@ -985,7 +974,7 @@ def add2systemd(**kwargs):
 	if os.path.isfile(path):
 		print("Unit exist.")
 		return
-	# end if
+	#end if
 
 	text = f"""
 [Unit]
@@ -1037,7 +1026,7 @@ rc_cmd $1
 		# Перезапустить systemd
 		args = ["systemctl", "daemon-reload"]
 		subprocess.run(args)
-	# end if
+	#end if
 
 	# Включить автозапуск
 	if psys == "OpenBSD":
@@ -1127,7 +1116,7 @@ def get_git_url(git_path):
 		if "origin" in line:
 			buff = line.split()
 			url = buff[1]
-	# end if
+	#end if
 	return url
 #end define
 
@@ -1174,7 +1163,7 @@ def get_git_branch(git_path):
 		if "*" in line:
 			buff = line.split()
 			branch = buff[1]
-	# end if
+	#end if
 	return branch
 #end define
 

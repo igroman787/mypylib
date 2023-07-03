@@ -35,7 +35,7 @@ class Dict(dict):
 
 	def _parse_dict(self, d):
 		for key, value in d.items():
-			if type(value) == dict:
+			if type(value) in [dict, Dict]:
 				value = Dict(value)
 			if type(value) == list:
 				value = self._parse_list(value)
@@ -45,7 +45,7 @@ class Dict(dict):
 	def _parse_list(self, lst):
 		result = list()
 		for value in lst:
-			if type(value) == dict:
+			if type(value) in [dict, Dict]:
 				value = Dict(value)
 			result.append(value)
 		return result
@@ -390,8 +390,7 @@ class MyPyClass:
 			color_start = bcolors.ERROR + bcolors.BOLD
 		else:
 			color_start = bcolors.OKGREEN + bcolors.BOLD
-		thread_text = "{0}{1}{2}".format(color_start, "<{0}>".format(self.get_thread_name()).ljust(14, ' '),
-										bcolors.ENDC)
+		thread_text = "{0}{1}{2}".format(color_start, "<{0}>".format(self.get_thread_name()).ljust(14, ' '), bcolors.ENDC)
 		log_text = mode_text + time_text + thread_text + input_text
 
 		# Queue for recording
@@ -526,53 +525,87 @@ class MyPyClass:
 			print("Wow. You are faster than me")
 	#end define
 	
-	def merge_two_dicts(self, local_data, file_data):
-		dict_type_list = [dict, Dict]
-		for key in file_data:
-			local_item = local_data.get(key)
-			file_item = file_data.get(key)
-			local_item_type = type(local_item)
-			file_item_type = type(file_item)
-			if local_item != file_item and local_item_type in dict_type_list and file_item_type in dict_type_list:
-				self.merge_two_dicts(local_item, file_item)
-			elif local_item != file_item:
-				local_data[key] = file_item
-	#end define
-
 	def merge_three_dicts(self, local_data, file_data, old_file_data):
+		if (id(local_data) == id(file_data) or
+			id(file_data) == id(old_file_data) or
+			id(local_data) == id(old_file_data)):
+			print(local_data.keys())
+			print(file_data.keys())
+			raise Exception(f"merge_three_dicts error: merge the same object")
+		#end if
+		
 		need_write_local_data = False
 		if local_data == file_data and file_data == old_file_data:
 			return need_write_local_data
 		#end if
 
 		dict_keys = list()
-		dict_type_list = [dict, Dict]
+		#dict_types = [dict, Dict]
 		dict_keys += [key for key in local_data if key not in dict_keys]
 		dict_keys += [key for key in file_data if key not in dict_keys]
 		for key in dict_keys:
-			local_item = local_data.get(key)
-			file_item = file_data.get(key)
-			old_file_item = old_file_data.get(key)
-			local_item_type = type(local_item)
-			file_item_type = type(file_item)
-			old_file_item_type = type(file_item)
-			if local_item != file_item and local_item_type in dict_type_list and file_item_type in dict_type_list and old_file_item_type in dict_type_list:
-				buff = self.merge_three_dicts(local_item, file_item, old_file_item)
-				if buff is True:
-					need_write_local_data = True
-			elif local_item != old_file_item and file_item == old_file_item:
-				#print(f"find db change {key}: {old_file_item} -> {local_item}")
-				old_file_data[key] = local_item
+			buff = self.merge_three_dicts_process(key, local_data, file_data, old_file_data)
+			if buff is True:
 				need_write_local_data = True
-			elif local_item == old_file_item and file_item != old_file_item:
-				#print(f"find config file change {key}: {old_file_item} -> {file_item}")
-				old_file_data[key] = file_item
-				local_data[key] = file_item
-			elif local_item != old_file_item and file_item != old_file_item:
-				#print(f"find db and config file change {key}: {old_file_item} -> {file_item} <- {local_item}")
-				old_file_data[key] = file_item
-				local_data[key] = file_item
 		return need_write_local_data
+	#end define
+
+	def merge_three_dicts_process(self, key, local_data, file_data, old_file_data):
+		need_write_local_data = False
+		tmp = self.mtdp_get_tmp(key, local_data, file_data, old_file_data)
+		if tmp.local_item != tmp.file_item and tmp.file_item == tmp.old_file_item:
+			# find local change
+			self.mtdp_flc(key, local_data, file_data, old_file_data)
+			need_write_local_data = True
+		elif tmp.file_item != tmp.old_file_item:
+			# find config file change
+			self.mtdp_fcfc(key, local_data, file_data, old_file_data)
+		return need_write_local_data
+	#end define
+	
+	def mtdp_get_tmp(self, key, local_data, file_data, old_file_data):
+		tmp = Dict()
+		tmp.local_item = local_data.get(key)
+		tmp.file_item = file_data.get(key)
+		tmp.old_file_item = old_file_data.get(key)
+		tmp.local_item_type = type(tmp.local_item)
+		tmp.file_item_type = type(tmp.file_item)
+		tmp.old_file_item_type = type(tmp.old_file_item)
+		if tmp.local_item is None:
+			local_data[key] = tmp.file_item_type()
+			tmp.local_item = local_data.get(key)
+			tmp.local_item_type = type(tmp.local_item)
+		return tmp
+	#end define
+
+	def mtdp_flc(self, key, local_data, file_data, old_file_data):
+		dict_types = [dict, Dict]
+		tmp = self.mtdp_get_tmp(key, local_data, file_data, old_file_data)
+		if tmp.local_item_type in dict_types and tmp.file_item_type in dict_types and tmp.old_file_item_type in dict_types:
+			self.merge_three_dicts(tmp.local_item, tmp.file_item, tmp.old_file_item)
+		elif tmp.local_item_type not in dict_types:
+			#print(f"find local change {key}: {tmp.old_file_item} -> {tmp.local_item}")
+			old_file_data[key] = tmp.local_item
+		elif tmp.local_item_type in dict_types:
+			old_file_data[key] = Dict(tmp.local_item)
+		else:
+			raise Exception(f"mtdp_flc error: {key} -> {tmp.local_item_type}, {tmp.file_item_type}, {tmp.old_file_item_type}")
+	#end define
+
+	def mtdp_fcfc(self, key, local_data, file_data, old_file_data):
+		dict_types = [dict, Dict]
+		tmp = self.mtdp_get_tmp(key, local_data, file_data, old_file_data)
+		if tmp.local_item_type in dict_types and tmp.file_item_type in dict_types and tmp.old_file_item_type in dict_types:
+			self.merge_three_dicts(tmp.local_item, tmp.file_item, tmp.old_file_item)
+		elif tmp.file_item_type not in dict_types:
+			#print(f"find config file change {key}: {tmp.old_file_item} -> {tmp.file_item}")
+			local_data[key] = tmp.file_item
+			old_file_data[key] = tmp.file_item
+		elif tmp.file_item_type in dict_types:
+			local_data[key] = Dict(tmp.file_item)
+			old_file_data[key] = Dict(tmp.file_item)
+		else:
+			raise Exception(f"mtdp_fcfc error: {key} -> {tmp.local_item_type}, {tmp.file_item_type}, {tmp.old_file_item_type}")
 	#end define
 
 	def save_db(self):
@@ -590,8 +623,8 @@ class MyPyClass:
 			self.write_db(self.db)
 		try:
 			file_data = self.read_db(db_path)
-			self.merge_two_dicts(self.db, file_data)
-			self.merge_two_dicts(self.buffer.old_db, file_data)
+			self.db = Dict(file_data)
+			self.buffer.old_db = Dict(file_data)
 			self.set_default_config()
 			result = True
 		except Exception as err:

@@ -540,7 +540,6 @@ class MyPyClass:
 		#end if
 
 		dict_keys = list()
-		#dict_types = [dict, Dict]
 		dict_keys += [key for key in local_data if key not in dict_keys]
 		dict_keys += [key for key in file_data if key not in dict_keys]
 		for key in dict_keys:
@@ -571,10 +570,6 @@ class MyPyClass:
 		tmp.local_item_type = type(tmp.local_item)
 		tmp.file_item_type = type(tmp.file_item)
 		tmp.old_file_item_type = type(tmp.old_file_item)
-		if tmp.local_item is None:
-			local_data[key] = tmp.file_item_type()
-			tmp.local_item = local_data.get(key)
-			tmp.local_item_type = type(tmp.local_item)
 		return tmp
 	#end define
 
@@ -583,11 +578,15 @@ class MyPyClass:
 		tmp = self.mtdp_get_tmp(key, local_data, file_data, old_file_data)
 		if tmp.local_item_type in dict_types and tmp.file_item_type in dict_types and tmp.old_file_item_type in dict_types:
 			self.merge_three_dicts(tmp.local_item, tmp.file_item, tmp.old_file_item)
+		elif tmp.local_item is None:
+			#print(f"find local change {key} -> {tmp.local_item}")
+			pass
 		elif tmp.local_item_type not in dict_types:
 			#print(f"find local change {key}: {tmp.old_file_item} -> {tmp.local_item}")
-			old_file_data[key] = tmp.local_item
+			pass
 		elif tmp.local_item_type in dict_types:
-			old_file_data[key] = Dict(tmp.local_item)
+			#print(f"find local change {key}: {tmp.old_file_item} -> {tmp.local_item}")
+			pass
 		else:
 			raise Exception(f"mtdp_flc error: {key} -> {tmp.local_item_type}, {tmp.file_item_type}, {tmp.old_file_item_type}")
 	#end define
@@ -597,13 +596,15 @@ class MyPyClass:
 		tmp = self.mtdp_get_tmp(key, local_data, file_data, old_file_data)
 		if tmp.local_item_type in dict_types and tmp.file_item_type in dict_types and tmp.old_file_item_type in dict_types:
 			self.merge_three_dicts(tmp.local_item, tmp.file_item, tmp.old_file_item)
+		elif tmp.file_item is None:
+			#print(f"find config file change {key} -> {tmp.file_item}")
+			local_data.pop(key)
 		elif tmp.file_item_type not in dict_types:
 			#print(f"find config file change {key}: {tmp.old_file_item} -> {tmp.file_item}")
 			local_data[key] = tmp.file_item
-			old_file_data[key] = tmp.file_item
 		elif tmp.file_item_type in dict_types:
+			#print(f"find config file change {key}: {tmp.old_file_item} -> {tmp.file_item}")
 			local_data[key] = Dict(tmp.file_item)
-			old_file_data[key] = Dict(tmp.file_item)
 		else:
 			raise Exception(f"mtdp_fcfc error: {key} -> {tmp.local_item_type}, {tmp.file_item_type}, {tmp.old_file_item_type}")
 	#end define
@@ -611,6 +612,7 @@ class MyPyClass:
 	def save_db(self):
 		file_data = self.read_db(self.buffer.db_path)
 		need_write_local_data = self.merge_three_dicts(self.db, file_data, self.buffer.old_db)
+		self.buffer.old_db = Dict(self.db)
 		if need_write_local_data is True:
 			self.write_db(self.db)
 	#end define

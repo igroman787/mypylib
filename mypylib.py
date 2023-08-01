@@ -176,9 +176,6 @@ class MyPyClass:
 		# Load local database
 		self.load_db()
 		self.set_default_config()
-		if self.db.config.isLocaldbSaving is True:
-			self.start_cycle(self.save_db, sec=1)
-		#end if
 		
 		# Remove old log file
 		if self.db.config.isDeleteOldLogFile and os.path.isfile(self.buffer.log_file_name):
@@ -210,6 +207,8 @@ class MyPyClass:
 		self.start_cycle(self.self_test, sec=1)
 		if self.db.config.isWritingLogFile is True:
 			self.start_cycle(self.write_log, sec=1)
+		if self.db.config.isLocaldbSaving is True:
+			self.start_cycle(self.save_db, sec=1)
 		self.buffer.thread_count_old = threading.active_count()
 
 		# Logging the start of the program
@@ -615,6 +614,11 @@ class MyPyClass:
 		self.buffer.old_db = Dict(self.db)
 		if need_write_local_data is True:
 			self.write_db(self.db)
+	#end define
+	
+	def save(self):
+		self.save_db()
+		self.write_log()
 	#end define
 
 	def load_db(self, db_path=False):

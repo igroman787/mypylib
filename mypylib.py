@@ -1103,7 +1103,7 @@ def get_service_uptime(name):
 	err = process.stderr.decode("utf-8")
 	if len(err) > 0:
 		return
-	start_timestamp_monotonic = parse(output, f"{property}=", '\n')
+	start_timestamp_monotonic = parse(output, f"{property}=", '\n') or 0
 	start_timestamp_monotonic = int(start_timestamp_monotonic) / 10 ** 6
 	boot_timestamp = psutil.boot_time()
 	time_now = time.time()

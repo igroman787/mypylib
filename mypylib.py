@@ -2,10 +2,12 @@
 # -*- coding: utf_8 -*-
 
 import os
+import re
 import sys
 import time
 import json
 import zlib
+import signal
 import base64
 import psutil
 import struct
@@ -17,8 +19,6 @@ import subprocess
 import datetime as date_time_library
 from urllib.request import urlopen
 from urllib.error import URLError
-
-import re
 
 INFO = "info"
 WARNING = "warning"
@@ -141,6 +141,7 @@ class bcolors:
 
 class MyPyClass:
 	def __init__(self, file):
+		self.working = True
 		self.file = file
 		self.db = Dict()
 		self.db.config = Dict()
@@ -153,6 +154,10 @@ class MyPyClass:
 		self.buffer.free_space_memory = None
 		
 		self.refresh()
+		
+		# Catch the shutdown signal
+		signal.signal(signal.SIGINT, self.exit)
+		signal.signal(signal.SIGTERM, self.exit)
 	#end define
 
 	def refresh(self):
@@ -450,11 +455,11 @@ class MyPyClass:
 		return data
 	#end define
 
-	def exit(self):
-		if len(self.buffer.log_list) > 0:
-			time.sleep(1.1)
+	def exit(self, signum, frame):
+		self.working = False
 		if os.path.isfile(self.buffer.pid_file_path):
 			os.remove(self.buffer.pid_file_path)
+		self.save()
 		sys.exit(0)
 	#end define
 
@@ -487,17 +492,6 @@ class MyPyClass:
 	#end define
 
 	def write_db(self, data):
-		thr = threading.Thread(
-			target=self.write_db_process,
-			name="write_db_process",
-			args=(data,),
-			daemon=False
-		)
-		thr.start()
-		thr.join()
-	#end define
-
-	def write_db_process(self, data):
 		db_path = self.buffer.db_path
 		text = json.dumps(data, indent=4)
 		self.lock_file(db_path)
@@ -702,7 +696,7 @@ class MyPyClass:
 	#end define
 
 	def cycle(self, func, sec, args):
-		while True:
+		while self.working:
 			self.try_function(func, args=args)
 			time.sleep(sec)
 	#end define

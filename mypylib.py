@@ -455,7 +455,7 @@ class MyPyClass:
 		return data
 	#end define
 
-	def exit(self, signum, frame):
+	def exit(self, signum=None, frame=None):
 		self.working = False
 		if os.path.isfile(self.buffer.pid_file_path):
 			os.remove(self.buffer.pid_file_path)

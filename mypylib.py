@@ -995,7 +995,8 @@ def add2systemd(**kwargs):
 	post = kwargs.get("post", "/bin/echo service down")
 	user = kwargs.get("user", "root")
 	group = kwargs.get("group", user)
-	workdir = kwargs.get("workdir", None)
+	workdir = kwargs.get("workdir")
+	force = kwargs.get("force")
 	pversion = platform.version()
 	psys = platform.system()
 	path = "/etc/systemd/system/{name}.service".format(name=name)
@@ -1005,8 +1006,11 @@ def add2systemd(**kwargs):
 	if name is None or start is None:
 		raise Exception("Bad args. Need 'name' and 'start'.")
 	if os.path.isfile(path):
-		print("Unit exist.")
-		return
+		if force == True:
+			print("Unit exist, force rewrite")
+		else:
+			print("Unit exist.")
+			return
 	#end if
 
 	text = f"""

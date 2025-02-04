@@ -992,6 +992,7 @@ def run_as_root(args):
 def add2systemd(**kwargs):
 	name = kwargs.get("name")
 	start = kwargs.get("start")
+	pre = kwargs.get("pre")
 	post = kwargs.get("post", "/bin/echo service down")
 	user = kwargs.get("user", "root")
 	group = kwargs.get("group", user)
@@ -1023,6 +1024,7 @@ Type = simple
 Restart = always
 RestartSec = 30
 ExecStart = {start}
+{f"ExecStartPre = {pre}" if pre else '# ExecStartPre not set'}
 ExecStopPost = {post}
 User = {user}
 Group = {group} 

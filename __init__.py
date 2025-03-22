@@ -1,4 +1,4 @@
-from mypylib.mypylib import *
+from .mypylib import *
 
 __all__ = [
     "get_hash_md5",

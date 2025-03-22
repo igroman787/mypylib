@@ -4,7 +4,7 @@
 
 ## Быстрый старт
 ```python
-from mypylib.mypylib import *
+from mypylib import *
 
 local = MyPyClass(__file__)
 

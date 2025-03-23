@@ -1217,3 +1217,12 @@ def check_git_update(git_path):
 		result = None
 	return result
 #end define
+
+def start_service(local, service_name:str, sleep:int=1):
+	local.add_log(f"Start/restart {service_name} service", "debug")
+	args = ["systemctl", "restart", service_name]
+	subprocess.run(args)
+
+	local.add_log(f"sleep {sleep} sec", "debug")
+	time.sleep(sleep)
+#end define

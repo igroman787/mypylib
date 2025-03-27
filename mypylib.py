@@ -1226,3 +1226,9 @@ def start_service(local, service_name:str, sleep:int=1):
 	local.add_log(f"sleep {sleep} sec", "debug")
 	time.sleep(sleep)
 #end define
+
+def stop_service(local, service_name:str):
+	local.add_log(f"Stop {service_name} service", "debug")
+	args = ["systemctl", "stop", service_name]
+	subprocess.run(args)
+#end define

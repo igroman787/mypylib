@@ -1232,3 +1232,24 @@ def stop_service(local, service_name:str):
 	args = ["systemctl", "stop", service_name]
 	subprocess.run(args)
 #end define
+
+def GetConfig(**kwargs):
+	path = kwargs.get("path")
+	file = open(path, 'rt')
+	text = file.read()
+	file.close()
+	config = Dict(json.loads(text))
+	return config
+#end define
+
+
+def SetConfig(**kwargs):
+	path = kwargs.get("path")
+	data = kwargs.get("data")
+
+	# write config
+	text = json.dumps(data, indent=4)
+	file = open(path, 'wt')
+	file.write(text)
+	file.close()
+#end define

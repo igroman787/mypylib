@@ -1233,9 +1233,8 @@ def stop_service(local, service_name:str):
 	subprocess.run(args)
 #end define
 
-def GetConfig(**kwargs):
-	path = kwargs.get("path")
-	file = open(path, 'rt')
+def read_config_from_file(config_path:str):
+	file = open(config_path, 'rt')
 	text = file.read()
 	file.close()
 	config = Dict(json.loads(text))
@@ -1243,13 +1242,9 @@ def GetConfig(**kwargs):
 #end define
 
 
-def SetConfig(**kwargs):
-	path = kwargs.get("path")
-	data = kwargs.get("data")
-
-	# write config
+def write_confit_to_file(config_path:str, data:dict):
 	text = json.dumps(data, indent=4)
-	file = open(path, 'wt')
+	file = open(config_path, 'wt')
 	file.write(text)
 	file.close()
 #end define

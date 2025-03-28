@@ -160,6 +160,21 @@ class MyPyClass:
 		signal.signal(signal.SIGTERM, self.exit)
 	#end define
 
+	def start_service(self, service_name: str, sleep: int = 1):
+		self.add_log(f"Start/restart {service_name} service", "debug")
+		args = ["systemctl", "restart", service_name]
+		subprocess.run(args)
+
+		self.add_log(f"sleep {sleep} sec", "debug")
+		time.sleep(sleep)
+	# end define
+
+	def stop_service(self, service_name: str):
+		self.add_log(f"Stop {service_name} service", "debug")
+		args = ["systemctl", "stop", service_name]
+		subprocess.run(args)
+	# end define
+
 	def refresh(self):
 		# Get program, log and database file name
 		my_name = self.get_my_name()
@@ -1216,4 +1231,20 @@ def check_git_update(git_path):
 	if old_hash is None or new_hash is None:
 		result = None
 	return result
+#end define
+
+def read_config_from_file(config_path:str):
+	file = open(config_path, 'rt')
+	text = file.read()
+	file.close()
+	config = Dict(json.loads(text))
+	return config
+#end define
+
+
+def write_confit_to_file(config_path:str, data:dict):
+	text = json.dumps(data, indent=4)
+	file = open(config_path, 'wt')
+	file.write(text)
+	file.close()
 #end define

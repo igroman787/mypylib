@@ -1242,7 +1242,7 @@ def read_config_from_file(config_path:str):
 #end define
 
 
-def write_confit_to_file(config_path:str, data:dict):
+def write_config_to_file(config_path:str, data:dict):
 	text = json.dumps(data, indent=4)
 	file = open(config_path, 'wt')
 	file.write(text)

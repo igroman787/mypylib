@@ -179,6 +179,7 @@ class MyPyClass:
 
 	def refresh(self):
 		# Get program, log and database file name
+		user = get_username()
 		my_name = self.get_my_name()
 		my_work_dir = self.get_my_work_dir()
 		self.buffer.my_name = my_name
@@ -190,6 +191,7 @@ class MyPyClass:
 		self.buffer.log_file_name = my_work_dir + my_name + ".log"
 		self.buffer.db_path = my_work_dir + my_name + ".db"
 		self.buffer.pid_file_path = my_work_dir + my_name + ".pid"
+		self.buffer.venvs_dir = f"/home/{user}/.local/venv"
 		
 		# Check all directorys
 		os.makedirs(self.buffer.my_work_dir, exist_ok=True)
@@ -993,7 +995,7 @@ def hex2dec(h):
 #end define
 
 def run_as_root(args):
-	user = os.getenv("USER")
+	user = get_username()
 	user_id = os.getuid()
 	psys = platform.system()
 	pver = platform.version()
@@ -1019,6 +1021,11 @@ def run_as_root(args):
 		raise Exception(f"run_as_root error: the system is not supported: {psys} -> {pver}")
 	exit_code = subprocess.call(args)
 	return exit_code
+#end define
+
+def get_username():
+	user = os.getenv("USER")
+	return user
 #end define
 
 def add2systemd(**kwargs):

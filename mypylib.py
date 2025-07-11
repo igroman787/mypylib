@@ -256,6 +256,8 @@ class MyPyClass:
 			self.db.config.isLocaldbSaving = False
 		if self.db.config.isWritingLogFile is None:
 			self.db.config.isWritingLogFile = True
+		if self.db.config.logFileSizeLines is None:
+			self.db.config.logFileSizeLines = 16384
 	#end define
 
 	def start_only_one_process(self):
@@ -436,9 +438,10 @@ class MyPyClass:
 		# Control log size
 		if self.db.config.isLimitLogFile is False:
 			return
+		log_size = self.db.config.logFileSizeLines or 16384
 		allline = self.count_lines(log_file_name)
-		if allline > 4096 + 256:
-			delline = allline - 4096
+		if allline > log_size + 256:
+			delline = allline - log_size
 			f = open(log_file_name).readlines()
 			i = 0
 			while i < delline:

@@ -1010,8 +1010,7 @@ def run_as_root(args):
 		elif psys == "OpenBSD":
 			args = ["doas"] + args
 		else:
-			print("Enter root password")
-			args = ["su", "-c"] + [" ".join(args)]
+			raise Exception(f"run_as_root error: the system is not supported: {psys}")
 	exit_code = subprocess.call(args)
 	return exit_code
 #end define

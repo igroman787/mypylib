@@ -3,6 +3,7 @@
 
 import os
 import re
+import shutil
 import sys
 import grp
 import time
@@ -998,30 +999,19 @@ def hex2dec(h):
 #end define
 
 def run_as_root(args):
-	user = get_username()
-	user_id = os.getuid()
 	psys = platform.system()
-	pver = platform.version()
-	if type(args) == str:
-		separator = ' '
-		if separator in args:
-			args = args.split(separator)
-		else:
-			args = [args]
-	if user_id == 0:
-		print("User already is root. Using initial args")
-	elif "Ubuntu" in pver or "Debian" in pver:
-		sudo_group = grp.getgrnam("sudo")
-		sudo_users = sudo_group.gr_mem
-		if user in sudo_users:
-			args = ["sudo", "-s"] + args
+	if os.geteuid() != 0:
+		if psys == "Linux":
+			if shutil.which("sudo"):
+				args = ["sudo", "-s"] + args
+			else:
+				print("Enter root password")
+				args = ["su", "-c"] + [" ".join(args)]
+		elif psys == "OpenBSD":
+			args = ["doas"] + args
 		else:
 			print("Enter root password")
 			args = ["su", "-c"] + [" ".join(args)]
-	elif psys == "OpenBSD":
-		args = ["doas"] + args
-	else:
-		raise Exception(f"run_as_root error: the system is not supported: {psys} -> {pver}")
 	exit_code = subprocess.call(args)
 	return exit_code
 #end define

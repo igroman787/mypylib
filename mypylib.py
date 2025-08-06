@@ -1204,19 +1204,20 @@ def get_git_author_and_repo(git_path):
 	return author, repo
 #end define
 
-def get_git_last_remote_commit(git_path, branch="master"):
+def get_git_last_remote_commit(git_path, branch="master", with_days_ago=False):
 	author, repo = get_git_author_and_repo(git_path)
 	if author is None or repo is None:
 		return
 	url = f"https://api.github.com/repos/{author}/{repo}/branches/{branch}"
-	sha = None
-	try:
-		text = get_request(url)
-		data = json.loads(text)
-		sha = data["commit"]["sha"]
-	except URLError:
-		pass
-	return sha
+	text = get_request(url)
+	data = Dict(json.loads(text))
+	sha = data.commit.sha
+	date = data.commit.commit.author.date
+	utc_dt = date_time_library.datetime.strptime(date, '%Y-%m-%dT%H:%M:%SZ')
+	datetime_diff = date_time_library.datetime.now() - utc_dt
+	if with_days_ago == True:
+		return data.commit.sha, datetime_diff.days
+	return data.commit.sha
 #end define
 
 def get_git_branch(git_path):

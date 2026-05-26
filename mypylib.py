@@ -518,8 +518,10 @@ class MyPyClass:
 		db_path = self.buffer.db_path
 		text = json.dumps(data, indent=4)
 		self.lock_file(db_path)
-		self.write_file(db_path, text)
-		self.unlock_file(db_path)
+		try:
+			self.write_file(db_path, text)
+		finally:
+			self.unlock_file(db_path)
 	#end define
 
 	def lock_file(self, path):

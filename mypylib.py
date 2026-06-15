@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf_8 -*-
 
+import atexit
 import os
 import re
 import shutil
 import sys
-import grp
+import tempfile
 import time
 import json
+
+import filelock
 import zlib
 import signal
 import base64
@@ -21,7 +24,6 @@ import threading
 import subprocess
 import datetime as date_time_library
 from urllib.request import urlopen
-from urllib.error import URLError
 
 INFO = "info"
 WARNING = "warning"
@@ -155,12 +157,16 @@ class MyPyClass:
 		self.buffer.thread_count = None
 		self.buffer.memory_using = None
 		self.buffer.free_space_memory = None
-		
+
 		self.refresh()
-		
-		# Catch the shutdown signal
-		signal.signal(signal.SIGINT, self.exit)
-		signal.signal(signal.SIGTERM, self.exit)
+		self._tlock = threading.RLock()
+		self._flock = filelock.FileLock(
+			self.buffer.db_lock_path,
+			is_singleton=True,
+			poll_interval=0.01,
+			timeout=3,
+		)
+		self.initialize()
 	#end define
 
 	def start_service(self, service_name: str, sleep: int = 1):
@@ -191,21 +197,30 @@ class MyPyClass:
 		self.buffer.my_temp_dir = self.get_my_temp_dir()
 		self.buffer.log_file_name = my_work_dir + my_name + ".log"
 		self.buffer.db_path = my_work_dir + my_name + ".db"
+		self.buffer.db_lock_path = my_work_dir + my_name + ".lock"
 		self.buffer.pid_file_path = my_work_dir + my_name + ".pid"
 		self.buffer.venvs_dir = f"/home/{user}/.local/venv"
-		
+	#end define
+
+	def initialize(self):
 		# Check all directorys
 		os.makedirs(self.buffer.my_work_dir, exist_ok=True)
 		os.makedirs(self.buffer.my_temp_dir, exist_ok=True)
-		
+
 		# Load local database
 		self.load_db()
 		self.set_default_config()
-		
+
 		# Remove old log file
 		if self.db.config.isDeleteOldLogFile and os.path.isfile(self.buffer.log_file_name):
 			os.remove(self.buffer.log_file_name)
-		#end if
+		# end if
+
+		# Catch the shutdown signal
+		signal.signal(signal.SIGINT, self.exit)
+		signal.signal(signal.SIGTERM, self.exit)
+		# Save on normal interpreter exit
+		atexit.register(self.save)
 	#end define
 
 	def run(self):
@@ -493,8 +508,19 @@ class MyPyClass:
 	#end define
 
 	def write_file(self, path, text=""):
-		with open(path, 'wt') as file:
-			file.write(text)
+		dir = os.path.dirname(path)
+		name = os.path.basename(path)
+		fd, tmp = tempfile.mkstemp(dir=dir, prefix=f".{name}.")
+		try:
+			with os.fdopen(fd, "wt") as file:
+				file.write(text)
+			os.replace(tmp, path)
+		except:
+			try:
+				os.remove(tmp)
+			except OSError:
+				pass
+			raise
 	#end define
 
 	def read_db(self, db_path):
@@ -517,30 +543,9 @@ class MyPyClass:
 	def write_db(self, data):
 		db_path = self.buffer.db_path
 		text = json.dumps(data, indent=4)
-		self.lock_file(db_path)
 		self.write_file(db_path, text)
-		self.unlock_file(db_path)
 	#end define
 
-	def lock_file(self, path):
-		pid_path = path + ".lock"
-		for i in range(300):
-			if os.path.isfile(pid_path):
-				time.sleep(0.01)
-			else:
-				self.write_file(pid_path)
-				return
-		raise Exception("lock_file error: time out.")
-	#end define
-
-	def unlock_file(self, path):
-		pid_path = path + ".lock"
-		try:
-			os.remove(pid_path)
-		except:
-			print("Wow. You are faster than me")
-	#end define
-	
 	def merge_three_dicts(self, local_data, file_data, old_file_data):
 		if (id(local_data) == id(file_data) or
 			id(file_data) == id(old_file_data) or
@@ -626,11 +631,12 @@ class MyPyClass:
 	#end define
 
 	def save_db(self):
-		file_data = self.read_db(self.buffer.db_path)
-		need_write_local_data = self.merge_three_dicts(self.db, file_data, self.buffer.old_db)
-		self.buffer.old_db = Dict(self.db)
-		if need_write_local_data is True:
-			self.write_db(self.db)
+		with self._tlock, self._flock:
+			file_data = self.read_db(self.buffer.db_path)
+			need_write_local_data = self.merge_three_dicts(self.db, file_data, self.buffer.old_db)
+			self.buffer.old_db = Dict(self.db)
+			if need_write_local_data is True:
+				self.write_db(self.db)
 	#end define
 	
 	def save(self):
